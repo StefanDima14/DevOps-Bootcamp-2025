@@ -1,4 +1,9 @@
+## SSH to EC2 instances
+
+SSH from NodeA to NodeB
 ![ssh-from-a-to-b](images/ssh-from-a-to-b.png)
+
+SSH from NodeB to NodeA
 ![ssh-from-b-to-a](images/ssh-from-b-to-a.png)
 
 ## Reflection
