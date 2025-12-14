@@ -1,2 +1,3 @@
 .terraform/
 nodes_connect.pub
+.DS_Store
