@@ -83,10 +83,11 @@ These permission policies should be attached to your user to complete the assign
 
    - **DynamoDB Table:** Used for Terraform state locking to prevent concurrent modifications to the state file.
      ![dynamodb](screenshots/dynamodb.png)
-   - **S3 Bucket for Terraform State:** Stores the Terraform state file remotely, enabling collaboration and state recovery.
-     ![s3-tfstate](screenshots/s3-tfstate.png)
    - **S3 Bucket (UI):** S3 bucket as seen in the AWS Console, confirming its creation.
      ![s3](screenshots/s3.png)
+   - **S3 Bucket for Terraform State:** Stores the Terraform state file remotely, enabling collaboration and state recovery.
+     ![s3-tfstate](screenshots/s3-tfstate.png)
+
 
    **NOTE:** Create an SSH key on your local computer and copy the public key to the root directory of the Terraform project. Add it to your `.gitignore` file to avoid including it when pushing to Git!
 
