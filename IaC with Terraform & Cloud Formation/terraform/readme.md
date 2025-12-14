@@ -143,3 +143,12 @@ After all resources are created, you can connect to each instance using the EC2 
 ### Why use DynamoDB for Terraform state locking?
 
 When using Terraform in a team or with remote state, it is important to prevent multiple people or processes from making changes to the infrastructure at the same time. DynamoDB is used for state locking, which ensures that only one Terraform process can modify the state at a time, preventing conflicts and potential corruption of the state file.
+
+
+## Destroy the infrastructure
+
+In order to not generate any costs in the AWS Console run the below command to destroy all the resources created:
+
+```sh
+    terraform destroy
+```

@@ -95,3 +95,16 @@ Terraform, on the other hand, uses its own language called HCL. While this requi
 A key advantage of Terraform is its versatility. It is not limited to AWS and can manage resources across multiple cloud providers and platforms, making it a better choice for multi-cloud or hybrid environments.
 
 On the other hand, if the infrastructure is strongly related to AWS services, CloudFormation could be a better solution.
+
+## Destroy the infrastructure
+
+In order to not generate any costs in the AWS Console run the below command to destroy all the resources created:
+
+```sh
+    aws cloudformation delete-stack --stack-name assingment2
+```
+Verify deletion:
+
+```sh
+    aws cloudformation describe-stacks --stack-name assingment2
+```
