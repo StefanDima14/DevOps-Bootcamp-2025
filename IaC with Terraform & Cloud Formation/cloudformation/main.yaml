@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template for two EC2 instances with SSH connectivity in private subnets
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.10.0.0/16
+  SubnetACidr:
+    Type: String
+    Default: 10.10.1.0/24
+  SubnetBCidr:
+    Type: String
+    Default: 10.10.2.0/24
+  InstanceType:
+    Type: String
+    Default: t3.micro
+
+Resources:
+  NewKeyPair:
+    Type: 'AWS::EC2::KeyPair'
+    Properties: 
+      KeyName: nodes-connect
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: cyber-vpc
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref SubnetACidr
+      AvailabilityZone: eu-west-1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SubnetA
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref SubnetBCidr
+      AvailabilityZone: eu-west-1b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SubnetB
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH between instances
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.10.1.0/24
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 10.10.2.0/24
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: mutual-ssh
+
+  InstanceA:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref NewKeyPair
+      SubnetId: !Ref SubnetA
+      ImageId: ami-09c54d172e7aa3d9a 
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: NodeA
+
+  InstanceB:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref NewKeyPair
+      SubnetId: !Ref SubnetB
+      ImageId: ami-09c54d172e7aa3d9a
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: NodeB
+
+Outputs:
+  VPCId:
+    Description: VPC ID
+    Value: !Ref VPC
+  SubnetAId:
+    Description: Subnet A ID
+    Value: !Ref SubnetA
+  SubnetBId:
+    Description: Subnet B ID
+    Value: !Ref SubnetB
+  InstanceAPrivateIP:
+    Description: Private IP of NodeA
+    Value: !GetAtt InstanceA.PrivateIpAddress
+  InstanceBPrivateIP:
+    Description: Private IP of NodeB
+    Value: !GetAtt InstanceB.PrivateIpAddress
