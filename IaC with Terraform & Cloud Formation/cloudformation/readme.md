@@ -17,7 +17,7 @@ The infrastructure described in `/cloudformation/main.yaml` will be created with
 
 The infrastructure created has:
 
-- **EC2 Key Pair (`NewKeyPair`)**: Creates an EC2 key pair named `nodes-connect` to enable SSH access to the instances. The private key must be downloaded and used for SSH connections.
+- **EC2 Key Pair (`NewKeyPair`)**: Creates an EC2 key pair named `nodes-connect` to enable SSH access to the instances. The private key must be downloaded and used for SSH connections. the key-pair is stored in the SSM service.
 
 - **VPC (`VPC`)**: Provisions a Virtual Private Cloud with the CIDR block `10.10.0.0/16`, DNS support, and DNS hostnames enabled. This provides an isolated network for the resources.
 
@@ -59,6 +59,9 @@ The outputs declared in the `main.yaml` file are displayed in the output section
 
 From this output, the private IPs for each instance can be used to connect via SSH.
 
+## About AWS SSM (Systems Manager)
+
+AWS Systems Manager (SSM) is a service that helps you manage and automate your AWS resources securely at scale. In this context, SSM is used to securely store and retrieve the EC2 key pair's private key as a parameter, allowing you to download the key for SSH access without exposing it in plaintext or storing it insecurely. This enhances security and simplifies key management for your EC2 instances.
 To retrieve the SSH private key in order to connect via SSH between the instances, use the commands below:
 
 ```sh
@@ -70,6 +73,8 @@ This command will display the key pair ID created with CloudFormation.
 aws ssm get-parameter --name /ec2/keypair/key-015be13d981137af6 --with-decryption --query Parameter.Value --output text > nodes-connect.pem
 ```
 This will retrieve the private key, which must be copied to each instance to perform SSH connections between them.
+
+More information about key-pairs here: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-key-pairs.html
 
 After all resources are created, you can connect to each instance using the EC2 Instance Connect option from the AWS Console with the Private IP option. Because this is the first time connecting to the instances, you must create an EC2 Instance Connect Endpoint. After the endpoint is created, you can connect to each instance.
 
