@@ -17,6 +17,8 @@ These permission policies should be attached to your user to complete the assign
 
 - The `variables.tf` file defines the variables used in the Terraform files to allow for a parameterized structure.
 
+- The `terraform.tfvars` file contains the actual values for the variables defined in `variables.tf`.
+
 - The infrastructure is described in the `main.tf` file and includes:
 
   - **EC2 Key Pair (`aws_key_pair`)**: Creates an EC2 key pair named `nodes-connect` using a locally generated public key (`nodes_connect.pub`). The private key must be used for SSH connections between the instances.
