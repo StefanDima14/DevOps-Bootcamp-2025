@@ -33,6 +33,8 @@ These permission policies should be attached to your user to complete the assign
 
   - **EC2 Instance B**: Launches an EC2 instance in SubnetB, using the specified instance type and the created key pair. The instance is tagged as `NodeB` and is associated with the security group for SSH access.
 
+  - **EC2 Instance Connect Endpoint (`aws_ec2_instance_connect_endpoint`)**: Creates an EC2 Instance Connect Endpoint in SubnetA associated with the `mutual-ssh` security group. `preserve_client_ip` is set to `false`. This endpoint enables using EC2 Instance Connect (private IP option) to connect to instances that do not have public IP addresses.
+
   - **Outputs**: The configuration outputs the IDs of the VPC, both subnets, and the private IP addresses of both EC2 instances for reference after creation.
 
 ### Deploying the Infrastructure

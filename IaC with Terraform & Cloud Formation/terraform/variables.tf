@@ -52,3 +52,9 @@ variable "instance_type" {
   default     = "t3.micro"
   
 }
+
+variable "region" {
+  description = "AWS Region"
+  type        = string
+  default     = "eu-west-1"
+}

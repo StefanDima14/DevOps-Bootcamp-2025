@@ -23,3 +23,8 @@ output "key_pair_id" {
   value       = aws_key_pair.nodes_connect.id
   
 }
+
+output "ec2_instance_connect_endpoint" {
+  description = "The ID of the EC2 Instance Connect Endpoint"
+  value       = aws_ec2_instance_connect_endpoint.ec2_instance_connect_endpoint.id
+}

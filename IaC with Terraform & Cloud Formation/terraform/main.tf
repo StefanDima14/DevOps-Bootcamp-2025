@@ -103,3 +103,12 @@ resource "aws_instance" "node_b" {
     Name = "NodeB"
   }
 }
+
+resource "aws_ec2_instance_connect_endpoint" "ec2_instance_connect_endpoint" {
+  subnet_id = aws_subnet.subnet_a.id
+  preserve_client_ip = false
+  security_group_ids = [aws_security_group.mutual_ssh.id]
+  tags = {
+    Name = "ec2-instance-connect-endpoint-tf"
+  }
+}
