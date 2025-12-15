@@ -28,7 +28,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: cyber-vpc
+          Value: cyber-vpc-cf
 
   SubnetA:
     Type: AWS::EC2::Subnet
@@ -39,7 +39,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: SubnetA
+          Value: SubnetA-cf
 
   SubnetB:
     Type: AWS::EC2::Subnet
@@ -50,7 +50,7 @@ Resources:
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: SubnetB
+          Value: SubnetB-cf
 
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -71,7 +71,7 @@ Resources:
           CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
-          Value: mutual-ssh
+          Value: mutual-ssh-cf
 
   InstanceA:
     Type: AWS::EC2::Instance
@@ -84,7 +84,7 @@ Resources:
         - !Ref SecurityGroup
       Tags:
         - Key: Name
-          Value: NodeA
+          Value: NodeA-cf
 
   InstanceB:
     Type: AWS::EC2::Instance
@@ -97,7 +97,18 @@ Resources:
         - !Ref SecurityGroup
       Tags:
         - Key: Name
-          Value: NodeB
+          Value: NodeB-cf
+          
+  EC2InstanceConnectEndpoint:
+    Type: AWS::EC2::InstanceConnectEndpoint
+    Properties:
+      PreserveClientIp: false
+      SecurityGroupIds: 
+        - !Ref SecurityGroup
+      SubnetId: !Ref SubnetA
+      Tags: 
+        - Key: Name
+          Value: ec2-instance-connect-endpoint-cf
 
 Outputs:
   VPCId:
@@ -115,3 +126,6 @@ Outputs:
   InstanceBPrivateIP:
     Description: Private IP of NodeB
     Value: !GetAtt InstanceB.PrivateIpAddress
+  EC2InstanceConnectEndpointId:
+    Description: EC2 Instance Connect Endpoint ID
+    Value: !Ref EC2InstanceConnectEndpoint

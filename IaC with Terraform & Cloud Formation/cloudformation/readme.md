@@ -33,10 +33,12 @@ The infrastructure created has:
 
 - **Outputs**: The template outputs the IDs of the VPC, both subnets, and the private IP addresses of both EC2 instances for reference after stack creation.
 
+ - **EC2 Instance Connect Endpoint (`EC2InstanceConnectEndpoint`)**: Creates an EC2 Instance Connect Endpoint in `SubnetA` associated with the `SecurityGroup` created by the template. `PreserveClientIp` is set to `false`. This endpoint enables EC2 Instance Connect (private IP option) to reach instances that do not have public IP addresses; the template outputs the endpoint ID after creation.
+
 Run the command below to create the CloudFormation stack:
 
 ```sh
-aws cloudformation deploy --template-file main.yaml --stack-name assignment2 --region eu-west-1
+aws cloudformation deploy --template-file main.yaml --stack-name cf-stack --region eu-west-1
 ```
 
 Expected output:
@@ -101,10 +103,10 @@ On the other hand, if the infrastructure is strongly related to AWS services, Cl
 In order to not generate any costs in the AWS Console run the below command to destroy all the resources created:
 
 ```sh
-    aws cloudformation delete-stack --stack-name assingment2
+    aws cloudformation delete-stack --stack-name cf-stack
 ```
 Verify deletion:
 
 ```sh
-    aws cloudformation describe-stacks --stack-name assingment2
+    aws cloudformation describe-stacks --stack-name cf-stack
 ```
