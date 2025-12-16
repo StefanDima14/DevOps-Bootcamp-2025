@@ -1,7 +1,7 @@
 
 # NeoNews CLI
 
-![NeoNews Banner](https://user-images.githubusercontent.com/1287098/147876189-3f434a42-7c3e-4d8a-9883-7a4b640093d1.png)
+![NeoNews Banner](images/banner.png)
 
 A command-line interface for fetching the latest news from various countries and topics, and archiving them to AWS.
 
