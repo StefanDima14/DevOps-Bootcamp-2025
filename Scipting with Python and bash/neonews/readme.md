@@ -102,3 +102,19 @@ The `Makefile` provides several commands to help you manage the application:
 - **`make nuke-db`**: **(DANGEROUS)** This command will delete all data from the DynamoDB table and empty the S3 bucket. You will be prompted for confirmation before the operation proceeds.
 
 Enjoy using NeoNews!
+
+
+
+## Screenshots
+
+Initialize the cloud resources
+
+![Init-cloud](images/init-cloud.png)
+
+News offered based on the selection of country and language
+
+![News](images/news-selection.png)
+
+Destroy the cloud resources
+
+![Nuke-db](images/nuke-db.png)
