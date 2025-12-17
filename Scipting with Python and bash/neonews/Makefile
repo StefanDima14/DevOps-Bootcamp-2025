@@ -15,7 +15,7 @@ install: ## Set up environment & dependencies
 	python3 -m venv $(VENV_DIR)
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
-	@printf "\033[1;32mEnvironment ready! Don't forget to configure your .env file. 🧑‍🚀\033[0m\n"
+	@echo "\033[1;32mEnvironment ready! Don't forget to configure your .env file. 🧑‍🚀\033[0m"
 
 run: ## Launch CLI interface
 	$(PYTHON) main.py
@@ -27,12 +27,12 @@ clean: ## Reset workspace (remove venv and cache)
 	@echo "Workspace cleaned. 🧹"
 
 init-cloud: ## Provision the DynamoDB table and S3 Bucket
-	@printf "\033[32mSummoning Cloud Resources... 🔮\033[0m\n"
+	@echo "\033[32mSummoning Cloud Resources... 🔮\033[0m"
 	$(PYTHON) -m src.db_ops --action init
-	@printf "\033[32mInfrastructure ready.\033[0m\n"
+	@echo "\033[32mInfrastructure ready.\033[0m"
 
 nuke-db: ## Destroy records from DynamoDB and S3 Bucket
-	@printf "\033[31mWARNING: This will incinerate all data in the table.\033[0m\n"
+	@echo "\033[31mWARNING: This will incinerate all data in the table.\033[0m"
 	@read -p "Are you sure? [y/N]: " confirm && if [ "$$confirm" = "y" ]; then \
 		$(PYTHON) -m src.db_ops --action nuke; \
 	fi

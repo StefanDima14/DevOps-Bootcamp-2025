@@ -42,37 +42,7 @@ def print_banner():
         padding=(1, 1)
     ))
 
-def main():
-    print_banner()
-
-    #Initialize AWS Resources
-    with console.status("[bold green]Checking AWS Resources...[/bold green]", spinner="dots"):
-        aws.init_resources()
-        time.sleep(1)
-    console.print("[green]✔ AWS Connection Established[/green]")
-
-    #User Selections about Country and News Topic
-    countries = ["Romania","United States", "United Kingdom", "France", "Germany", "Spain"]
-    
-    selected_country = questionary.select(
-        "Select a Country (fan favourites):",
-        choices=countries
-    ).ask()
-
-    topics = ["technology","business","sports","politics","education","entertainment","science","health","world"]
-    selected_topic = questionary.select(
-        "Select a News Topic:",
-        choices=topics
-    ).ask()
-    
-    #Default language input for display, but API logic in this demo defaults to EN to ensure results
-    language = questionary.select(
-        "Select Preferred Language:",
-        choices=["English", "Spanish", "French", "German", "Romanian"]
-    ).ask()
-
-    selected_language_code = language_map.get(language, "en")
-
+def fetch_and_display_news(selected_country, selected_topic, selected_language_code):
     #Fetch Data
     country_info = None
     articles = []
@@ -91,7 +61,7 @@ def main():
 
         if not country_info:
             console.print(f"[bold red]Could not find data for {selected_country}[/bold red]")
-            sys.exit(1)
+            return
 
         #News Data
         task2 = progress.add_task(description=f"Fetching News for {selected_topic}...", total=1)
@@ -130,6 +100,56 @@ def main():
 
     console.print(table)
     console.print(f"\n[bold green]✔ Successfully saved {len(articles)} articles to AWS![/bold green]")
+
+def main():
+    print_banner()
+
+    #Initialize AWS Resources
+    with console.status("[bold green]Checking AWS Resources...[/bold green]", spinner="dots"):
+        aws.init_resources()
+        time.sleep(1)
+    console.print("[green]✔ AWS Connection Established[/green]")
+
+    while True:
+        #User Selections about Country and News Topic
+        countries = ["Romania","United States", "United Kingdom", "France", "Germany", "Spain", "Exit"]
+        
+        selected_country = questionary.select(
+            "Select a Country (fan favourites):",
+            choices=countries
+        ).ask()
+
+        if selected_country == "Exit":
+            console.print("[bold red]Exiting...[/bold red]")
+            sys.exit(0)
+
+        while True:
+            topics = ["technology","business","sports","politics","education","entertainment","science","health","world", "Back"]
+            selected_topic = questionary.select(
+                "Select a News Topic:",
+                choices=topics
+            ).ask()
+
+            if selected_topic == "Back":
+                break
+
+            while True:
+                #Default language input for display, but API logic in this demo defaults to EN to ensure results
+                languages = ["English", "Spanish", "French", "German", "Romanian", "Back"]
+                language = questionary.select(
+                    "Select Preferred Language:",
+                    choices=languages
+                ).ask()
+
+                if language == "Back":
+                    break
+
+                selected_language_code = language_map.get(language, "en")
+                
+                fetch_and_display_news(selected_country, selected_topic, selected_language_code)
+                
+                questionary.press_any_key_to_continue().ask()
+                break
 
 if __name__ == "__main__":
     try:
