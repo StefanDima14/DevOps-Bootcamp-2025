@@ -38,7 +38,12 @@ Here is a breakdown of the project's file structure and the purpose of each file
 Before you can run this application, you will need the following:
 
 - Python 3.7+
-- An AWS account with credentials configured on your local machine.
+- An AWS account with a CLI user configured on your local machine. This user needs **AmazonS3FullAccess** and **AmazonDynamoDBFullAccess** permissions (Note: This is more permissive than usual, but is for demo purposes).
+    - Create access keys for the CLI user in the AWS Console.
+    - Use the following command to set the credentials locally:
+      ```bash
+      aws configure
+      ```
 - API key from [Newsdata.io](https://newsdata.io/).
 
 ## Setup & Installation

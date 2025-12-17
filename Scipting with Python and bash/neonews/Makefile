@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 VENV_DIR = newnews_venv
 PYTHON = $(VENV_DIR)/bin/python
 PIP = $(VENV_DIR)/bin/pip
@@ -27,11 +28,11 @@ clean: ## Reset workspace (remove venv and cache)
 
 init-cloud: ## Provision the DynamoDB table and S3 Bucket
 	@echo "\033[32mSummoning Cloud Resources... 🔮\033[0m"
-	$(PYTHON) src/db_ops.py --action init
+	$(PYTHON) -m src.db_ops --action init
 	@echo "\033[32mInfrastructure ready.\033[0m"
 
 nuke-db: ## Destroy records from DynamoDB and S3 Bucket
 	@echo "\033[31mWARNING: This will incinerate all data in the table.\033[0m"
 	@read -p "Are you sure? [y/N]: " confirm && if [ "$$confirm" = "y" ]; then \
-		$(PYTHON) src/db_ops.py --action nuke; \
+		$(PYTHON) -m src.db_ops --action nuke; \
 	fi
