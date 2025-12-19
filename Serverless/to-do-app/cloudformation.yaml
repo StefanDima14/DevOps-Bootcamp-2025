@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation template to createa a VPC with two private subnets
+
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.10.0.0/16
+  SubnetACidr:
+    Type: String
+    Default: 10.10.1.0/24
+  SubnetBCidr:
+    Type: String
+    Default: 10.10.2.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: cyber-vpc-cf
+
+  SubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref SubnetACidr
+      AvailabilityZone: eu-west-1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SubnetA-cf
+
+  SubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref SubnetBCidr
+      AvailabilityZone: eu-west-1b
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: SubnetB-cf

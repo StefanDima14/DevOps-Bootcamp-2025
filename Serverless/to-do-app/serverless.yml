@@ -1,0 +1,79 @@
+# "org" ensures this Service is used with the correct Serverless Framework License Key.
+org: learningsls14
+# "service" is the name of this project. This will also be added to your AWS resource names.
+service: to-do-app
+
+provider:
+  name: aws
+  runtime: python3.12
+  profile: learning
+  region: eu-west-1
+  stage: ${opt:stage, 'dev'}
+  environment:
+    TABLE_NAME: todo-table-${self:provider.stage}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - "dynamodb:PutItem"
+            - "dynamodb:Get*"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:Scan*"
+          Resource: !GetAtt TodoTable.Arn
+
+  vpc:
+    securityGroupIds:
+      - !Ref LambdaSecurityGroup
+    subnetIds:
+      - subnet-0ca4c2c7eb512f55a
+      - subnet-0e88bbaffd0047086
+
+custom:
+  pythonRequirements:
+    dockerizePip: non-linux # Compiles dependencies in a Lambda-like Docker container
+
+functions:
+  createTodo:
+    handler: createTodo.createTodo
+    events:
+      - httpApi:
+          path: /todo
+          method: POST
+  getTodos:
+    handler: getTodo.getTodos
+    events:
+      - httpApi:
+          path: /todos
+          method: GET
+
+resources:
+  Resources:
+    TodoTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: todo-table-${self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SG for ${self:provider.stage}
+        VpcId: vpc-08004660fe9c1b6cd
+
+    DynamoDBEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+        VpcId: vpc-08004660fe9c1b6cd
+        VpcEndpointType: Gateway
+        RouteTableIds:
+          - rtb-0cda1ff67e3bb3f1f
