@@ -1,6 +1,4 @@
-# "org" ensures this Service is used with the correct Serverless Framework License Key.
 org: learningsls14
-# "service" is the name of this project. This will also be added to your AWS resource names.
 service: to-do-app
 
 provider:
@@ -9,8 +7,11 @@ provider:
   profile: learning
   region: eu-west-1
   stage: ${opt:stage, 'dev'}
+  timeout: 30
   environment:
     TABLE_NAME: todo-table-${self:provider.stage}
+    QUEUE_URL: !Ref TodoQueue
+    DLQ_URL: !Ref TodoDLQ
 
   iam:
     role:
@@ -23,38 +24,163 @@ provider:
             - "dynamodb:DeleteItem"
             - "dynamodb:Scan*"
           Resource: !GetAtt TodoTable.Arn
+        - Effect: Allow
+          Action:
+            - "sqs:SendMessage"
+            - "sqs:ReceiveMessage"
+            - "sqs:DeleteMessage"
+            - "sqs:GetQueueAttributes"
+          Resource: 
+            - !GetAtt TodoQueue.Arn
+            - !GetAtt TodoDLQ.Arn
+        - Effect: Allow
+          Action:
+            - "ec2:CreateNetworkInterface"
+            - "ec2:DescribeNetworkInterfaces"
+            - "ec2:DeleteNetworkInterface"
+          Resource: "*"
 
   vpc:
     securityGroupIds:
       - !Ref LambdaSecurityGroup
     subnetIds:
-      - subnet-0ca4c2c7eb512f55a
-      - subnet-0e88bbaffd0047086
+      - !Ref PrivateSubnetA
+      - !Ref PrivateSubnetB
 
 custom:
   pythonRequirements:
-    dockerizePip: non-linux # Compiles dependencies in a Lambda-like Docker container
+    dockerizePip: non-linux
 
 functions:
-  createTodo:
-    handler: createTodo.createTodo
+  addTodo:
+    handler: src/createTodo.createTodo
     events:
       - httpApi:
           path: /todo
           method: POST
+  
   getTodos:
-    handler: getTodo.getTodos
+    handler: src/getTodo.getTodos
     events:
       - httpApi:
           path: /todos
           method: GET
 
+  processTodo:
+    handler: src/processTodo.handler
+    events:
+      - sqs:
+          arn: !GetAtt TodoQueue.Arn
+          batchSize: 1
+  
+  reDriveDLQ:
+    handler: src/reDriveDLQ.handler
+
 resources:
   Resources:
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        EnableDnsSupport: true
+        EnableDnsHostnames: true
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-vpc
+
+    PrivateSubnetA:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        CidrBlock: 10.0.1.0/24
+        AvailabilityZone: ${self:provider.region}a
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-private-subnet-a
+
+    PrivateSubnetB:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        CidrBlock: 10.0.2.0/24
+        AvailabilityZone: ${self:provider.region}b
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-private-subnet-b
+
+    LambdaSecurityGroup:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SG for ${self:provider.stage} lambdas
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-lambda-sg
+
+    LambdaSecurityGroupIngress:
+      Type: AWS::EC2::SecurityGroupIngress
+      Properties:
+        GroupId: !Ref LambdaSecurityGroup
+        IpProtocol: tcp
+        FromPort: 443
+        ToPort: 443
+        SourceSecurityGroupId: !Ref LambdaSecurityGroup
+
+    DynamoDBEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        ServiceName: !Sub com.amazonaws.${self:provider.region}.dynamodb
+        VpcId: !Ref VPC
+        VpcEndpointType: Gateway
+        RouteTableIds:
+          - !Ref PrivateRouteTableA
+          - !Ref PrivateRouteTableB
+
+    SQSEndpoint:
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        ServiceName: !Sub com.amazonaws.${self:provider.region}.sqs
+        VpcId: !Ref VPC
+        VpcEndpointType: Interface
+        SubnetIds:
+          - !Ref PrivateSubnetA
+          - !Ref PrivateSubnetB
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        PrivateDnsEnabled: true
+
+    PrivateRouteTableA:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-private-rt-a
+
+    PrivateRouteTableB:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: ${self:provider.stage}-private-rt-b
+
+    PrivateSubnetARouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PrivateSubnetA
+        RouteTableId: !Ref PrivateRouteTableA
+
+    PrivateSubnetBRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId: !Ref PrivateSubnetB
+        RouteTableId: !Ref PrivateRouteTableB
+
     TodoTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: todo-table-${self:provider.stage}
+        TableName: ${self:provider.environment.TABLE_NAME}
         AttributeDefinitions:
           - AttributeName: id
             AttributeType: S
@@ -63,17 +189,38 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
-    LambdaSecurityGroup:
-      Type: AWS::EC2::SecurityGroup
+    TodoQueue:
+      Type: AWS::SQS::Queue
       Properties:
-        GroupDescription: SG for ${self:provider.stage}
-        VpcId: vpc-08004660fe9c1b6cd
+        QueueName: todo-queue-${self:provider.stage}
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt TodoDLQ.Arn
+          maxReceiveCount: 3
 
-    DynamoDBEndpoint:
-      Type: AWS::EC2::VPCEndpoint
+    TodoDLQ:
+      Type: AWS::SQS::Queue
       Properties:
-        ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
-        VpcId: vpc-08004660fe9c1b6cd
-        VpcEndpointType: Gateway
-        RouteTableIds:
-          - rtb-0cda1ff67e3bb3f1f
+        QueueName: todo-dlq-${self:provider.stage}
+
+  Outputs:
+    VPC:
+      Value: !Ref VPC
+      Description: The VPC ID
+    PrivateSubnetA:
+      Value: !Ref PrivateSubnetA
+      Description: Private Subnet A ID
+    PrivateSubnetB:
+      Value: !Ref PrivateSubnetB
+      Description: Private Subnet B ID
+    LambdaSecurityGroup:
+      Value: !Ref LambdaSecurityGroup
+      Description: Lambda Security Group ID
+    TodoQueueUrl:
+      Value: !Ref TodoQueue
+      Description: The URL of the SQS queue
+    TodoDLQUrl:
+      Value: !Ref TodoDLQ
+      Description: The URL of the Dead Letter Queue
+    TodoTableName:
+      Value: !Ref TodoTable
+      Description: The name of the DynamoDB table

@@ -96,3 +96,91 @@ serverless plugin install -n serverless-python-requirements
 ```
 
 Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
+
+
+```mermaid
+graph TD
+    subgraph "User's Local Machine"
+        Client(Client)
+    end
+
+    subgraph "AWS Cloud"
+        subgraph "API Gateway (HTTP API)"
+            direction LR
+            EndpointPost["POST /todo"]
+            EndpointGet["GET /todos"]
+        end
+
+        subgraph "VPC (10.0.0.0/16)"
+            direction TB
+
+            subgraph "Availability Zone A (eu-west-1a)"
+                subgraph "Private Subnet A (10.0.1.0/24)"
+                    LambdaExecution1(Lambda Execution Environment)
+                end
+            end
+
+            subgraph "Availability Zone B (eu-west-1b)"
+                subgraph "Private Subnet B (10.0.2.0/24)"
+                    LambdaExecution2(Lambda Execution Environment)
+                end
+            end
+            
+            subgraph "VPC Endpoints"
+                SQS_Endpoint[SQS Interface Endpoint]
+                DynamoDB_Endpoint[DynamoDB Gateway Endpoint]
+            end
+
+            LambdaExecution1 --> SQS_Endpoint
+            LambdaExecution1 --> DynamoDB_Endpoint
+            LambdaExecution2 --> SQS_Endpoint
+            LambdaExecution2 --> DynamoDB_Endpoint
+        end
+
+        subgraph "AWS Lambda Functions"
+            AddTodo(addTodo)
+            GetTodos(getTodos)
+            ProcessTodo(processTodo)
+            ReDrive(reDriveDLQ)
+        end
+
+        subgraph "Amazon SQS"
+            TodoQueue[TodoQueue]
+            TodoDLQ[TodoDLQ]
+        end
+
+        subgraph "Amazon DynamoDB"
+            TodoTable[(TodoTable)]
+        end
+
+        subgraph "Developer"
+            Dev(Developer/Operator)
+        end
+
+    end
+
+    %% Connections
+    Client -- "1. Create Task Request" --> EndpointPost
+    EndpointPost -- "2. Triggers" --> AddTodo
+    AddTodo -- "3. Runs in private subnet" --> LambdaExecution1
+    AddTodo -- "4. Sends message via Endpoint" --> SQS_Endpoint --> TodoQueue
+    
+    Client -- "8. Get Tasks Request" --> EndpointGet
+    EndpointGet -- "9. Triggers" --> GetTodos
+    GetTodos -- "10. Runs in private subnet" --> LambdaExecution2
+    GetTodos -- "11. Queries table via Endpoint" --> DynamoDB_Endpoint --> TodoTable
+    TodoTable -- "12. Returns items" --> GetTodos
+    GetTodos -- "13. Returns data" --> Client
+
+    TodoQueue -- "5. Triggers" --> ProcessTodo
+    ProcessTodo -- "6. Runs in private subnet" --> LambdaExecution1
+    ProcessTodo -- "7. Writes to DB via Endpoint" --> DynamoDB_Endpoint --> TodoTable
+    
+    ProcessTodo -- "On failure (3x)" --> TodoQueue
+    TodoQueue -- "Moves message" --> TodoDLQ
+
+    Dev -- "Manually triggers" --> ReDrive
+    ReDrive -- "Reads from DLQ" --> SQS_Endpoint --> TodoDLQ
+    ReDrive -- "Sends back to main queue" --> SQS_Endpoint --> TodoQueue
+
+```
