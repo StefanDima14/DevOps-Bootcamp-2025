@@ -98,6 +98,7 @@ serverless plugin install -n serverless-python-requirements
 Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
 
 
+```mermaid
 graph TD
     %% --- STYLING CLASSES (AWS Standard Colors) ---
     classDef client fill:#ffffff,stroke:#333,stroke-width:2px,color:#000;
@@ -184,7 +185,7 @@ graph TD
     Func_Get -. "10. VPC Access" .-> LambdaENI_2
     LambdaENI_2 -- "11. Query (Gateway EP)" --> DDB_VPCE
     DDB_VPCE --> Table_Todo
-    Table_Todo -- "12. Return Data" --> Func_Get
+    Table_Todo -- "12. Return items" --> Func_Get
     Func_Get -- "13. JSON Response" --> Client
 
     %% Flow 3: Async Processing
@@ -200,3 +201,4 @@ graph TD
     Dev -- "Manually Invoke" --> Func_ReDrive
     Func_ReDrive --> Queue_DLQ
     Func_ReDrive --> Queue_Main
+```
