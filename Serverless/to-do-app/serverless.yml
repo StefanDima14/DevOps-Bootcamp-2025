@@ -1,3 +1,4 @@
+### Set the global context. The serverless targets the eu-west-1 region and sets python 3.12 for the lambdas function
 org: learningsls14
 service: to-do-app
 
@@ -6,18 +7,21 @@ provider:
   runtime: python3.12
   profile: learning
   region: eu-west-1
-  stage: ${opt:stage, 'dev'}
-  timeout: 30
+  stage: ${opt:stage, 'dev'} # variable substitution. It defaults to 'dev' but allows override via CLI (serverless deploy --stage prod)
+  timeout: 30 ## time for lambdas functions to finish execution
+  
+  ### Environment variables inserted in the python code
   environment:
     TABLE_NAME: todo-table-${self:provider.stage}
     QUEUE_URL: !Ref TodoQueue
     DLQ_URL: !Ref TodoDLQ
 
+	### IAM Policies applied to the lambdas functions (what a lambda function is allowed to do
   iam:
     role:
       statements:
         - Effect: Allow
-          Action:
+          Action: ## CRUD operations on DynamoDB
             - "dynamodb:PutItem"
             - "dynamodb:Get*"
             - "dynamodb:UpdateItem"
@@ -25,7 +29,7 @@ provider:
             - "dynamodb:Scan*"
           Resource: !GetAtt TodoTable.Arn
         - Effect: Allow
-          Action:
+          Action: ## SQS permissions
             - "sqs:SendMessage"
             - "sqs:ReceiveMessage"
             - "sqs:DeleteMessage"
@@ -34,12 +38,13 @@ provider:
             - !GetAtt TodoQueue.Arn
             - !GetAtt TodoDLQ.Arn
         - Effect: Allow
-          Action:
+          Action: ## The lambdas are living in private subnets, they neet to be able to create Elastic Network Interfaces to communicate with subnets
             - "ec2:CreateNetworkInterface"
             - "ec2:DescribeNetworkInterfaces"
             - "ec2:DeleteNetworkInterface"
           Resource: "*"
 
+	### Global VPC configuration -> applies the VPC settings to all functions defined. The lambda functions will reside in the private subnets A and B
   vpc:
     securityGroupIds:
       - !Ref LambdaSecurityGroup
@@ -51,33 +56,42 @@ custom:
   pythonRequirements:
     dockerizePip: non-linux
 
+### functions definitions
 functions:
   addTodo:
-    handler: src/createTodo.createTodo
+	  handler: src/createTodo.createTodo ## The python code that will define the functionality of this lambda function
     events:
-      - httpApi:
+      - httpApi: ## Creates an API Gateway with POST operation on /todo endpoint
           path: /todo
           method: POST
   
   getTodos:
-    handler: src/getTodo.getTodos
+    handler: src/getTodo.getTodos ## The python code that will define the functionality of this lambda function
     events:
-      - httpApi:
+      - httpApi: ## Creates an API Gateway with GET operation on /todos endpoint
           path: /todos
           method: GET
 
-  processTodo:
+  processTodo: ## Lambda functions that works as async worker. Worker Function
+  # It polls the SQS Queue. It process one message at a time. 
+  # The client makes a request to POST /todo endpoint and for his pov everything worked but the actual request is set in a sqs queue and is processed asyncronos.
+  # The Producer (addTodo): The user hits the API. The addTodo function formats the data and pushes a message to the TodoQueue. It returns 200 OK immediately. The user is happy because the app feels fast.
+  # The Buffer (TodoQueue): The message sits in the queue. This is a buffer. If 1,000 users hit your API at once, the queue fills up, preventing your database or downstream systems from crashing.
+  # The Consumer (processTodo): This function pulls messages from the queue to execute the actual logic (e.g., resizing an image, sending an email, complex DB calculations).
     handler: src/processTodo.handler
     events:
       - sqs:
           arn: !GetAtt TodoQueue.Arn
           batchSize: 1
   
+  ## Maintenance function. It will read failed messages from the DLQ and will push them back to the main queue for reprocessing
   reDriveDLQ:
     handler: src/reDriveDLQ.handler
 
+### Resources section -> CloudFormation
 resources:
   Resources:
+  ## Create a VPC
     VPC:
       Type: AWS::EC2::VPC
       Properties:
@@ -87,7 +101,7 @@ resources:
         Tags:
           - Key: Name
             Value: ${self:provider.stage}-vpc
-
+	## Create the private subnetA
     PrivateSubnetA:
       Type: AWS::EC2::Subnet
       Properties:
@@ -97,7 +111,7 @@ resources:
         Tags:
           - Key: Name
             Value: ${self:provider.stage}-private-subnet-a
-
+	## Create the private subnetB
     PrivateSubnetB:
       Type: AWS::EC2::Subnet
       Properties:
@@ -107,7 +121,8 @@ resources:
         Tags:
           - Key: Name
             Value: ${self:provider.stage}-private-subnet-b
-
+            
+  ## Create the LAmbdas Security group 
     LambdaSecurityGroup:
       Type: AWS::EC2::SecurityGroup
       Properties:
@@ -117,6 +132,7 @@ resources:
           - Key: Name
             Value: ${self:provider.stage}-lambda-sg
 
+	## Create. a security group Ingress rule to allow lambdas to communicate with SQS Interface Endpoint. The lambdas and the SQS use the same sg
     LambdaSecurityGroupIngress:
       Type: AWS::EC2::SecurityGroupIngress
       Properties:
@@ -126,29 +142,34 @@ resources:
         ToPort: 443
         SourceSecurityGroupId: !Ref LambdaSecurityGroup
 
+	## Create VPC Endpoint for DynamoDB
+	## Because the functions have no Internet Access they neet to reach the DynamoDB and SQS services so VPC Endpoints are mandatory
+	
     DynamoDBEndpoint:
       Type: AWS::EC2::VPCEndpoint
       Properties:
         ServiceName: !Sub com.amazonaws.${self:provider.region}.dynamodb
         VpcId: !Ref VPC
-        VpcEndpointType: Gateway
+        VpcEndpointType: Gateway ## Creates a route in your Route Table that directs DynamoDB traffic internally within the AWS network
         RouteTableIds:
           - !Ref PrivateRouteTableA
           - !Ref PrivateRouteTableB
-
+          
+	## Create VPC Endpoint for SQS
     SQSEndpoint:
       Type: AWS::EC2::VPCEndpoint
       Properties:
         ServiceName: !Sub com.amazonaws.${self:provider.region}.sqs
         VpcId: !Ref VPC
-        VpcEndpointType: Interface
+        VpcEndpointType: Interface ## Inserts an Elastic Network Interface (ENI) into your subnets. It acts as a private entry point to SQS.
         SubnetIds:
           - !Ref PrivateSubnetA
           - !Ref PrivateSubnetB
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
         PrivateDnsEnabled: true
-
+	
+	## Route Table for subnet A
     PrivateRouteTableA:
       Type: AWS::EC2::RouteTable
       Properties:
@@ -156,7 +177,8 @@ resources:
         Tags:
           - Key: Name
             Value: ${self:provider.stage}-private-rt-a
-
+            
+	## Route Table for subnet B
     PrivateRouteTableB:
       Type: AWS::EC2::RouteTable
       Properties:
@@ -164,7 +186,8 @@ resources:
         Tags:
           - Key: Name
             Value: ${self:provider.stage}-private-rt-b
-
+	
+	## Route Table Association 
     PrivateSubnetARouteTableAssociation:
       Type: AWS::EC2::SubnetRouteTableAssociation
       Properties:
@@ -177,6 +200,7 @@ resources:
         SubnetId: !Ref PrivateSubnetB
         RouteTableId: !Ref PrivateRouteTableB
 
+	## Create DynamoDB table
     TodoTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -189,19 +213,22 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 
+	## Create SQS 
     TodoQueue:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: todo-queue-${self:provider.stage}
         RedrivePolicy:
-          deadLetterTargetArn: !GetAtt TodoDLQ.Arn
-          maxReceiveCount: 3
+          deadLetterTargetArn: !GetAtt TodoDLQ.Arn ## association with the DLQ
+          maxReceiveCount: 3 ## if processTodo function fails to process a message 3 times, AWS will automatically moves he massage to TodoDLQ so it doesn't block the queue
 
+	## Creates DLQ 
     TodoDLQ:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: todo-dlq-${self:provider.stage}
 
+	## Show Outputs in CloudFormation stack Outputs section
   Outputs:
     VPC:
       Value: !Ref VPC

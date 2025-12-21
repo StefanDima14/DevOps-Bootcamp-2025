@@ -1,204 +1,214 @@
-<!--
-title: 'AWS Simple HTTP Endpoint example in Python'
-description: 'This template demonstrates how to make a simple HTTP API with Python running on AWS Lambda and API Gateway using the Serverless Framework.'
-layout: Doc
-framework: v4
-platform: AWS
-language: python
-authorLink: 'https://github.com/serverless'
-authorName: 'Serverless, Inc.'
-authorAvatar: 'https://avatars1.githubusercontent.com/u/13742415?s=200&v=4'
--->
+# To-Do List Serverless Application
 
-# Serverless Framework Python HTTP API on AWS
+This project is a serverless to-do list application built with the Serverless Framework on AWS. It demonstrates a secure, scalable, and resilient architecture using asynchronous processing with SQS and private networking within a VPC.
 
-This template demonstrates how to make a simple HTTP API with Python running on AWS Lambda and API Gateway using the Serverless Framework.
+## Table of Contents
 
-This template does not include any kind of persistence (database). For more advanced examples, check out the [serverless/examples repository](https://github.com/serverless/examples/) which includes DynamoDB, Mongo, Fauna and other examples.
+- [Architecture](#architecture)
+  - [Overview](#overview)
+  - [Visual Diagram](#visual-diagram)
+  - [Application Flow](#application-flow)
+- [AWS Resources](#aws-resources)
+  - [Lambda Functions](#lambda-functions)
+  - [IAM Roles & Permissions](#iam-roles--permissions)
+  - [Networking](#networking)
+- [Deployment](#deployment)
+- [Testing](#testing)
+  - [Scenario 1: Happy Path](#scenario-1-happy-path-creating-and-retrieving-a-to-do)
+  - [Scenario 2: Error Handling](#scenario-2-error-handling--dlq-testing)
+- [Cleanup](#cleanup)
 
-## Usage
+## Architecture
 
-### Deployment
+### Overview
 
-```
+The application is designed around an asynchronous, event-driven architecture to decouple the API from the backend processing. When a new to-do is created, it's not written directly to the database. Instead, it's sent as a message to an SQS queue. A separate Lambda function then processes messages from this queue, providing resilience and scalability.
+
+All resources are deployed within a custom VPC. The Lambda functions run in private subnets with no direct internet access, enhancing security. They communicate with other AWS services (SQS, DynamoDB) privately and securely using VPC Endpoints.
+
+**Core Technologies:**
+- **Compute:** AWS Lambda
+- **API:** Amazon API Gateway (HTTP API)
+- **Database:** Amazon DynamoDB
+- **Queueing:** Amazon SQS (Standard Queue & Dead-Letter Queue)
+- **Networking:** Amazon VPC, Private Subnets, VPC Endpoints
+- **Framework:** Serverless Framework
+
+### Visual Diagram
+
+
+
+### Application Flow
+
+1.  **Create To-Do (POST `/todo`):**
+    *   A client sends a `POST` request to the `/todo` endpoint on **API Gateway**.
+    *   API Gateway triggers the `addTodo` Lambda function.
+    *   The `addTodo` function's sole responsibility is to validate the input and send it as a message to the **`TodoQueue`** (SQS). This makes the API endpoint extremely fast and responsive.
+
+2.  **Process To-Do (SQS Trigger):**
+    *   The message in the `TodoQueue` automatically triggers the `processTodo` Lambda function.
+    *   This function reads the message and writes the task details into the **`TodoTable`** (DynamoDB).
+
+3.  **Get To-Dos (GET `/todos`):**
+    *   A client sends a `GET` request to the `/todos` endpoint.
+    *   API Gateway triggers the `getTodos` Lambda function, which queries the `TodoTable` and returns all to-do items.
+
+4.  **Error Handling (`TodoDLQ`):**
+    *   If the `processTodo` function fails to process a message (e.g., due to a bug or bad data), SQS will retry. After 3 failed attempts, the message is automatically moved to the **`TodoDLQ`** (a Dead-Letter Queue). This prevents a single "poison pill" message from blocking the entire queue.
+
+5.  **DLQ Re-Drive:**
+    *   The `reDriveDLQ` function can be manually triggered by a developer to move messages from the `TodoDLQ` back to the main `TodoQueue` for reprocessing after a bug fix has been deployed.
+
+## AWS Resources
+
+### Lambda Functions
+
+- **`addTodo`**
+  - **Trigger:** API Gateway (`POST /todo`)
+  - **Purpose:** Receives new to-do tasks from the client. Its only job is to put the task into the `TodoQueue` for asynchronous processing.
+
+- **`getTodos`**
+  - **Trigger:** API Gateway (`GET /todos`)
+  - **Purpose:** Fetches all to-do items from the `TodoTable` in DynamoDB and returns them to the client.
+
+- **`processTodo`**
+  - **Trigger:** SQS (`TodoQueue`)
+  - **Purpose:** The background worker. It's triggered by new messages in the SQS queue. It takes the task from the message and saves it to the DynamoDB table.
+
+- **`reDriveDLQ`**
+  - **Trigger:** Manual Invocation
+  - **Purpose:** An operational utility function. It moves failed messages from the `TodoDLQ` back to the main `TodoQueue` so they can be processed again.
+
+### IAM Roles & Permissions
+
+A single IAM role is created and shared by all Lambda functions in this service. Following the principle of least privilege, this role only grants the permissions necessary for the functions to perform their duties.
+
+- **`dynamodb:*` on `TodoTable`**
+  - **Why:** Allows the `getTodos` and `processTodo` functions to read from and write to the DynamoDB table where tasks are stored.
+- **`sqs:*` on `TodoQueue` and `TodoDLQ`**
+  - **Why:** Allows the `addTodo` function to send messages, `processTodo` to receive/delete messages, and `reDriveDLQ` to move messages between the queues.
+- **`ec2:CreateNetworkInterface`, `ec2:DescribeNetworkInterfaces`, `ec2:DeleteNetworkInterface` on `*`**
+  - **Why:** These permissions are required for the Lambda service to create and manage Elastic Network Interfaces (ENIs) within your VPC. This is how a Lambda function connects to a private subnet to access other VPC resources like your endpoints.
+
+### Networking
+
+The entire application stack is deployed inside a custom VPC for security and isolation.
+- **VPC & Private Subnets:** Two private subnets are used across two Availability Zones for high availability. The Lambda functions are placed here, meaning they cannot be accessed from the public internet directly.
+- **VPC Endpoints:** To allow the functions to communicate with AWS services without traversing the internet, VPC Endpoints are used:
+  - **Gateway Endpoint for DynamoDB:** Provides a secure and private connection to DynamoDB.
+  - **Interface Endpoint for SQS:** Provides a secure and private connection to SQS.
+
+## Deployment
+
+To deploy the service, you need the Serverless Framework installed and your AWS credentials configured.
+
+```bash
+# Install dependencies (if any)
+npm install
+
+# Deploy the stack to AWS
 serverless deploy
 ```
+After deployment, the CLI will output your API Gateway endpoints.
 
-After deploying, you should see output similar to:
+## Testing
 
+You will need your API Gateway URL from the deployment output to run these tests.
+
+### Scenario 1: Happy Path (Creating and Retrieving a To-Do)
+
+This test validates the main application flow.
+
+**1. Create a new To-Do item**
+
+Run the following `curl` command to send a `POST` request to your `/todo` endpoint.
+
+```bash
+curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
+-H "Content-Type: application/json" \
+-d '{"task": "Buy milk and bread"}'
 ```
-Deploying "aws-python-http-api" to stage "dev" (us-east-1)
+**Expected Outcome:** You should receive a `200 OK` response.
 
-✔ Service deployed to stack aws-python-http-api-dev (85s)
+**2. Verify Background Processing**
 
-endpoint: GET - https://6ewcye3q4d.execute-api.us-east-1.amazonaws.com/
-functions:
-  hello: aws-python-http-api-dev-hello (2.3 kB)
+- **Check CloudWatch Logs for `processTodo`:**
+  - Go to the AWS Console: `CloudWatch` -> `Log Groups`.
+  - Find the log group for `/aws/lambda/to-do-app-dev-processTodo`.
+  - You should see a new log stream indicating a successful execution.
+
+  <br>
+  *PASTE YOUR `processTodo` LOG SCREENSHOT HERE*
+  <br>
+
+- **Check DynamoDB:**
+  - Go to the AWS Console: `DynamoDB` -> `Tables` -> `todo-table-dev`.
+  - Click "Explore table items".
+  - You should see the new item `"task": "Buy milk and bread"`.
+
+  <br>
+  *PASTE YOUR DYNAMODB TABLE SCREENSHOT HERE*
+  <br>
+
+**3. Retrieve all To-Do items**
+
+Run the following `curl` command to `GET` all items.
+
+```bash
+curl -v "YOUR_API_GATEWAY_URL/todos"
 ```
+**Expected Outcome:** You should get a `200 OK` response with a JSON body containing a list of your to-do items.
 
-_Note_: In current form, after deployment, your API is public and can be invoked by anyone. For production deployments, you might want to configure an authorizer. For details on how to do that, refer to [http event docs](https://www.serverless.com/framework/docs/providers/aws/events/apigateway/).
+### Scenario 2: Error Handling & DLQ Testing
 
-### Invocation
+This test validates that failed messages are correctly sent to the Dead-Letter Queue.
 
-After successful deployment, you can call the created application via HTTP:
+**1. Simulate a Processing Error**
 
+To test the DLQ, we need to make the `processTodo` function fail.
+- **Edit the code:** Open `src/processTodo.py`.
+- **Introduce an error:** At the beginning of the `handler` function, add a line that will cause an exception, for example: `raise ValueError("Simulating a processing error!")`
+- **Redeploy the function:** `serverless deploy function -f processTodo`
+
+**2. Send a "Poison Pill" Message**
+
+Send another request just like in the happy path test.
+
+```bash
+curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
+-H "Content-Type: application/json" \
+-d '{"task": "This task will fail"}'
 ```
-curl https://xxxxxxx.execute-api.us-east-1.amazonaws.com/
-```
+**3. Verify the DLQ**
 
-Which should result in response similar to the following (removed `input` content for brevity):
+- **Check CloudWatch Logs for `processTodo`:** You will see logs showing the function failed 3 times with the error "Simulating a processing error!".
 
-```json
-{
-  "message": "Go Serverless v4.0! Your function executed successfully!"
-}
-```
+  <br>
+  *PASTE YOUR FAILED `processTodo` LOG SCREENSHOT HERE*
+  <br>
 
-### Local development
+- **Check the Dead-Letter Queue:**
+  - Go to the AWS Console: `SQS` -> `Queues`.
+  - Find `todo-dlq-dev`.
+  - Under "Messages available", you should see `1`. You can click "Send and receive messages" to view the message content.
 
-You can invoke your function locally by using the following command:
+  <br>
+  *PASTE YOUR SQS DLQ SCREENSHOT HERE*
+  <br>
 
-```
-serverless invoke local --function hello
-```
+**4. Trigger the Re-Drive Function (Optional)**
 
-Which should result in response similar to the following:
+- **Important:** First, fix the error in `src/processTodo.py` by removing the `raise ValueError(...)` line and redeploying: `serverless deploy function -f processTodo`.
+- Manually invoke the `reDriveDLQ` function from the AWS Console or using the Serverless Framework CLI:
+  ```bash
+  serverless invoke -f reDriveDLQ
+  ```
+- **Verify:** The message count in `todo-dlq-dev` should go to 0, and you should see a new successful execution log for `processTodo` and a new item in your DynamoDB table.
 
-```json
-{
-  "statusCode": 200,
-  "body": "{\n  \"message\": \"Go Serverless v4.0! Your function executed successfully!\"}"
-}
-```
+## Cleanup
 
-Alternatively, it is also possible to emulate API Gateway and Lambda locally by using `serverless-offline` plugin. In order to do that, execute the following command:
+To remove all the deployed resources from your AWS account, run the following command:
 
-```
-serverless plugin install -n serverless-offline
-```
-
-It will add the `serverless-offline` plugin to `devDependencies` in `package.json` file as well as will add it to `plugins` in `serverless.yml`.
-
-After installation, you can start local emulation with:
-
-```
-serverless offline
-```
-
-To learn more about the capabilities of `serverless-offline`, please refer to its [GitHub repository](https://github.com/dherault/serverless-offline).
-
-### Bundling dependencies
-
-In case you would like to include 3rd party dependencies, you will need to use a plugin called `serverless-python-requirements`. You can set it up by running the following command:
-
-```
-serverless plugin install -n serverless-python-requirements
-```
-
-Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
-
-
-```mermaid
-graph TD
-    %% --- STYLING CLASSES (AWS Standard Colors) ---
-    classDef client fill:#ffffff,stroke:#333,stroke-width:2px,color:#000;
-    classDef aws_compute fill:#FF9900,stroke:#D17D00,stroke-width:2px,color:white;
-    classDef aws_db fill:#3B48CC,stroke:#2E3899,stroke-width:2px,color:white;
-    classDef aws_network fill:#F2F7F2,stroke:#3F8624,stroke-width:2px,stroke-dasharray: 5 5,color:#3F8624;
-    classDef aws_subnet fill:#FFFFFF,stroke:#3F8624,stroke-width:1px,stroke-dasharray: 2 2,color:#3F8624;
-    classDef aws_integration fill:#FF4F8B,stroke:#CC2C64,stroke-width:2px,color:white;
-    classDef aws_apigw fill:#A166FF,stroke:#834CCF,stroke-width:2px,color:white;
-    classDef aws_vpce fill:#E6F6E6,stroke:#3F8624,stroke-width:2px,color:#3F8624;
-
-    %% --- THE DIAGRAM ---
-
-    subgraph UserSpace ["User Environment"]
-        Client([fa:fa-user Client / App]):::client
-        Dev([fa:fa-terminal DevOps Engineer]):::client
-    end
-
-    subgraph AWS_Cloud ["AWS Cloud Region (eu-west-1)"]
-        direction TB
-
-        %% 1. ENTRY POINT
-        subgraph APIGW ["API Gateway (HTTP API)"]
-            EndpointPost["POST /todo"]:::aws_apigw
-            EndpointGet["GET /todos"]:::aws_apigw
-        end
-
-        %% 2. VPC NETWORKING
-        subgraph VPC ["VPC (10.0.0.0/16)"]
-            direction TB
-            
-            subgraph VPCE ["VPC Endpoints (PrivateLink)"]
-                SQS_VPCE(Interface EP: SQS):::aws_vpce
-                DDB_VPCE(Gateway EP: DynamoDB):::aws_vpce
-            end
-
-            subgraph AZ_A ["AZ A (eu-west-1a)"]
-                subgraph SubnetA ["Private Subnet A"]
-                    LambdaENI_1[Lambda ENI A]:::aws_subnet
-                end
-            end
-
-            subgraph AZ_B ["AZ B (eu-west-1b)"]
-                subgraph SubnetB ["Private Subnet B"]
-                    LambdaENI_2[Lambda ENI B]:::aws_subnet
-                end
-            end
-        end
-
-        %% 3. COMPUTE LAYER (Logical)
-        %% Note: These run in the AWS control plane but project ENIs into your VPC
-        subgraph Lambdas ["Lambda Functions"]
-            Func_Add(fa:fa-server addTodo):::aws_compute
-            Func_Get(fa:fa-server getTodos):::aws_compute
-            Func_Process(fa:fa-microchip processTodo):::aws_compute
-            Func_ReDrive(fa:fa-wrench reDriveDLQ):::aws_compute
-        end
-
-        %% 4. STORAGE & QUEUE LAYER
-        subgraph ManagedServices ["Managed Services"]
-            subgraph SQS ["Amazon SQS"]
-                Queue_Main[TodoQueue]:::aws_integration
-                Queue_DLQ[TodoDLQ]:::aws_integration
-            end
-
-            subgraph DDB ["Amazon DynamoDB"]
-                Table_Todo[(TodoTable)]:::aws_db
-            end
-        end
-    end
-
-    %% --- CONNECTIONS ---
-
-    %% Flow 1: Add Todo
-    Client -- "1. POST JSON" --> EndpointPost
-    EndpointPost -- "2. Invoke" --> Func_Add
-    Func_Add -. "3. VPC Access" .-> LambdaENI_1
-    LambdaENI_1 -- "4. Send Msg (Interface EP)" --> SQS_VPCE
-    SQS_VPCE --> Queue_Main
-
-    %% Flow 2: Get Todos
-    Client -- "8. GET" --> EndpointGet
-    EndpointGet -- "9. Invoke" --> Func_Get
-    Func_Get -. "10. VPC Access" .-> LambdaENI_2
-    LambdaENI_2 -- "11. Query (Gateway EP)" --> DDB_VPCE
-    DDB_VPCE --> Table_Todo
-    Table_Todo -- "12. Return items" --> Func_Get
-    Func_Get -- "13. JSON Response" --> Client
-
-    %% Flow 3: Async Processing
-    Queue_Main -- "5. Polling Trigger" --> Func_Process
-    Func_Process -. "6. VPC Access" .-> LambdaENI_1
-    LambdaENI_1 -- "7. Put Item (Gateway EP)" --> DDB_VPCE
-    
-    %% Flow 4: Error Handling
-    Func_Process -- "x3 Failures" --> Queue_Main
-    Queue_Main -- "Dead Letter Queue" --> Queue_DLQ
-    
-    %% Flow 5: Operational Redrive
-    Dev -- "Manually Invoke" --> Func_ReDrive
-    Func_ReDrive --> Queue_DLQ
-    Func_ReDrive --> Queue_Main
+```bash
+serverless remove
 ```
