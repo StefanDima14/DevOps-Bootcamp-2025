@@ -54,7 +54,7 @@ All resources are deployed within a custom VPC. The Lambda functions run in priv
     *   API Gateway triggers the `getTodos` Lambda function, which queries the `TodoTable` and returns all to-do items.
 
 4.  **Error Handling (`TodoDLQ`):**
-    *   If the `processTodo` function fails to process a message (e.g., due to a bug or bad data), SQS will retry. After 3 failed attempts, the message is automatically moved to the **`TodoDLQ`** (a Dead-Letter Queue). This prevents a single "poison pill" message from blocking the entire queue.
+    *   If the `processTodo` function fails to process a message (e.g., due to a bug or bad data), SQS will retry. After 3 failed attempts, the message is automatically moved to the **`TodoDLQ`** (a Dead-Letter Queue). This prevents a single bad message from blocking the entire queue.
 
 5.  **DLQ Re-Drive:**
     *   The `reDriveDLQ` function can be manually triggered by a developer to move messages from the `TodoDLQ` back to the main `TodoQueue` for reprocessing after a bug fix has been deployed.
@@ -107,7 +107,7 @@ To deploy the service, you need the Serverless Framework installed and your AWS 
 npm install
 
 # Deploy the stack to AWS
-serverless deploy
+serverless deploy --stage <stage_name>
 ```
 After deployment, the CLI will output your API Gateway endpoints.
 
@@ -170,7 +170,7 @@ To test the DLQ, we need to make the `processTodo` function fail.
 - **Introduce an error:** At the beginning of the `handler` function, add a line that will cause an exception, for example: `raise ValueError("Simulating a processing error!")`
 - **Redeploy the function:** `serverless deploy function -f processTodo`
 
-**2. Send a "Poison Pill" Message**
+**2. Send a bad Message**
 
 Send another request just like in the happy path test.
 
