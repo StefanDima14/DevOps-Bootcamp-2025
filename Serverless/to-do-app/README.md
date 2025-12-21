@@ -98,89 +98,105 @@ serverless plugin install -n serverless-python-requirements
 Running the above will automatically add `serverless-python-requirements` to `plugins` section in your `serverless.yml` file and add it as a `devDependency` to `package.json` file. The `package.json` file will be automatically created if it doesn't exist beforehand. Now you will be able to add your dependencies to `requirements.txt` file (`Pipfile` and `pyproject.toml` is also supported but requires additional configuration) and they will be automatically injected to Lambda package during build process. For more details about the plugin's configuration, please refer to [official documentation](https://github.com/UnitedIncome/serverless-python-requirements).
 
 
-```mermaid
 graph TD
-    subgraph "User's Local Machine"
-        Client(Client)
+    %% --- STYLING CLASSES (AWS Standard Colors) ---
+    classDef client fill:#ffffff,stroke:#333,stroke-width:2px,color:#000;
+    classDef aws_compute fill:#FF9900,stroke:#D17D00,stroke-width:2px,color:white;
+    classDef aws_db fill:#3B48CC,stroke:#2E3899,stroke-width:2px,color:white;
+    classDef aws_network fill:#F2F7F2,stroke:#3F8624,stroke-width:2px,stroke-dasharray: 5 5,color:#3F8624;
+    classDef aws_subnet fill:#FFFFFF,stroke:#3F8624,stroke-width:1px,stroke-dasharray: 2 2,color:#3F8624;
+    classDef aws_integration fill:#FF4F8B,stroke:#CC2C64,stroke-width:2px,color:white;
+    classDef aws_apigw fill:#A166FF,stroke:#834CCF,stroke-width:2px,color:white;
+    classDef aws_vpce fill:#E6F6E6,stroke:#3F8624,stroke-width:2px,color:#3F8624;
+
+    %% --- THE DIAGRAM ---
+
+    subgraph UserSpace ["User Environment"]
+        Client([fa:fa-user Client / App]):::client
+        Dev([fa:fa-terminal DevOps Engineer]):::client
     end
 
-    subgraph "AWS Cloud"
-        subgraph "API Gateway (HTTP API)"
-            direction LR
-            EndpointPost["POST /todo"]
-            EndpointGet["GET /todos"]
+    subgraph AWS_Cloud ["AWS Cloud Region (eu-west-1)"]
+        direction TB
+
+        %% 1. ENTRY POINT
+        subgraph APIGW ["API Gateway (HTTP API)"]
+            EndpointPost["POST /todo"]:::aws_apigw
+            EndpointGet["GET /todos"]:::aws_apigw
         end
 
-        subgraph "VPC (10.0.0.0/16)"
+        %% 2. VPC NETWORKING
+        subgraph VPC ["VPC (10.0.0.0/16)"]
             direction TB
-
-            subgraph "Availability Zone A (eu-west-1a)"
-                subgraph "Private Subnet A (10.0.1.0/24)"
-                    LambdaExecution1(Lambda Execution Environment)
-                end
-            end
-
-            subgraph "Availability Zone B (eu-west-1b)"
-                subgraph "Private Subnet B (10.0.2.0/24)"
-                    LambdaExecution2(Lambda Execution Environment)
-                end
-            end
             
-            subgraph "VPC Endpoints"
-                SQS_Endpoint[SQS Interface Endpoint]
-                DynamoDB_Endpoint[DynamoDB Gateway Endpoint]
+            subgraph VPCE ["VPC Endpoints (PrivateLink)"]
+                SQS_VPCE(Interface EP: SQS):::aws_vpce
+                DDB_VPCE(Gateway EP: DynamoDB):::aws_vpce
             end
 
-            LambdaExecution1 --> SQS_Endpoint
-            LambdaExecution1 --> DynamoDB_Endpoint
-            LambdaExecution2 --> SQS_Endpoint
-            LambdaExecution2 --> DynamoDB_Endpoint
+            subgraph AZ_A ["AZ A (eu-west-1a)"]
+                subgraph SubnetA ["Private Subnet A"]
+                    LambdaENI_1[Lambda ENI A]:::aws_subnet
+                end
+            end
+
+            subgraph AZ_B ["AZ B (eu-west-1b)"]
+                subgraph SubnetB ["Private Subnet B"]
+                    LambdaENI_2[Lambda ENI B]:::aws_subnet
+                end
+            end
         end
 
-        subgraph "AWS Lambda Functions"
-            AddTodo(addTodo)
-            GetTodos(getTodos)
-            ProcessTodo(processTodo)
-            ReDrive(reDriveDLQ)
+        %% 3. COMPUTE LAYER (Logical)
+        %% Note: These run in the AWS control plane but project ENIs into your VPC
+        subgraph Lambdas ["Lambda Functions"]
+            Func_Add(fa:fa-server addTodo):::aws_compute
+            Func_Get(fa:fa-server getTodos):::aws_compute
+            Func_Process(fa:fa-microchip processTodo):::aws_compute
+            Func_ReDrive(fa:fa-wrench reDriveDLQ):::aws_compute
         end
 
-        subgraph "Amazon SQS"
-            TodoQueue[TodoQueue]
-            TodoDLQ[TodoDLQ]
-        end
+        %% 4. STORAGE & QUEUE LAYER
+        subgraph ManagedServices ["Managed Services"]
+            subgraph SQS ["Amazon SQS"]
+                Queue_Main[TodoQueue]:::aws_integration
+                Queue_DLQ[TodoDLQ]:::aws_integration
+            end
 
-        subgraph "Amazon DynamoDB"
-            TodoTable[(TodoTable)]
+            subgraph DDB ["Amazon DynamoDB"]
+                Table_Todo[(TodoTable)]:::aws_db
+            end
         end
-
-        subgraph "Developer"
-            Dev(Developer/Operator)
-        end
-
     end
 
-    %% Connections
-    Client -- "1. Create Task Request" --> EndpointPost
-    EndpointPost -- "2. Triggers" --> AddTodo
-    AddTodo -- "3. Runs in private subnet" --> LambdaExecution1
-    AddTodo -- "4. Sends message via Endpoint" --> SQS_Endpoint --> TodoQueue
+    %% --- CONNECTIONS ---
+
+    %% Flow 1: Add Todo
+    Client -- "1. POST JSON" --> EndpointPost
+    EndpointPost -- "2. Invoke" --> Func_Add
+    Func_Add -. "3. VPC Access" .-> LambdaENI_1
+    LambdaENI_1 -- "4. Send Msg (Interface EP)" --> SQS_VPCE
+    SQS_VPCE --> Queue_Main
+
+    %% Flow 2: Get Todos
+    Client -- "8. GET" --> EndpointGet
+    EndpointGet -- "9. Invoke" --> Func_Get
+    Func_Get -. "10. VPC Access" .-> LambdaENI_2
+    LambdaENI_2 -- "11. Query (Gateway EP)" --> DDB_VPCE
+    DDB_VPCE --> Table_Todo
+    Table_Todo -- "12. Return Data" --> Func_Get
+    Func_Get -- "13. JSON Response" --> Client
+
+    %% Flow 3: Async Processing
+    Queue_Main -- "5. Polling Trigger" --> Func_Process
+    Func_Process -. "6. VPC Access" .-> LambdaENI_1
+    LambdaENI_1 -- "7. Put Item (Gateway EP)" --> DDB_VPCE
     
-    Client -- "8. Get Tasks Request" --> EndpointGet
-    EndpointGet -- "9. Triggers" --> GetTodos
-    GetTodos -- "10. Runs in private subnet" --> LambdaExecution2
-    GetTodos -- "11. Queries table via Endpoint" --> DynamoDB_Endpoint --> TodoTable
-    TodoTable -- "12. Returns items" --> GetTodos
-    GetTodos -- "13. Returns data" --> Client
-
-    TodoQueue -- "5. Triggers" --> ProcessTodo
-    ProcessTodo -- "6. Runs in private subnet" --> LambdaExecution1
-    ProcessTodo -- "7. Writes to DB via Endpoint" --> DynamoDB_Endpoint --> TodoTable
+    %% Flow 4: Error Handling
+    Func_Process -- "x3 Failures" --> Queue_Main
+    Queue_Main -- "Dead Letter Queue" --> Queue_DLQ
     
-    ProcessTodo -- "On failure (3x)" --> TodoQueue
-    TodoQueue -- "Moves message" --> TodoDLQ
-
-    Dev -- "Manually triggers" --> ReDrive
-    ReDrive -- "Reads from DLQ" --> SQS_Endpoint --> TodoDLQ
-    ReDrive -- "Sends back to main queue" --> SQS_Endpoint --> TodoQueue
-
-```
+    %% Flow 5: Operational Redrive
+    Dev -- "Manually Invoke" --> Func_ReDrive
+    Func_ReDrive --> Queue_DLQ
+    Func_ReDrive --> Queue_Main
