@@ -137,18 +137,14 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
   - Find the log group for `/aws/lambda/to-do-app-dev-processTodo`.
   - You should see a new log stream indicating a successful execution.
 
-  <br>
-  ![processTodo Log](images/processTodo.png)
-  <br>
+![processTodo Log](images/processTodo.png)
 
 - **Check DynamoDB:**
   - Go to the AWS Console: `DynamoDB` -> `Tables` -> `todo-table-dev`.
   - Click "Explore table items".
   - You should see the new item `"task": "Buy milk and bread"`.
 
-  <br>
-  ![dynamoDB](images/dynamoDB.png)
-  <br>
+![dynamoDB](images/dynamoDB.png)
 
 **3. Retrieve all To-Do items**
 
@@ -159,9 +155,7 @@ curl -v -X GET "YOUR_API_GATEWAY_URL/todos"
 ```
 **Expected Outcome:** You should get a `200 OK` response with a JSON body containing a list of your to-do items.
 
-  <br>
-  ![getTodos](images/getTodos.png)
-  <br>
+![getTodos](images/getTodos.png)
 
 ### Scenario 2: Error Handling & DLQ Testing
 
