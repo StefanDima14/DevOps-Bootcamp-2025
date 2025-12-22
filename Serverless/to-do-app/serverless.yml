@@ -59,7 +59,7 @@ custom:
 ### functions definitions
 functions:
   addTodo:
-	  handler: src/createTodo.createTodo ## The python code that will define the functionality of this lambda function
+    handler: src/createTodo.createTodo ## The python code that will define the functionality of this lambda function
     events:
       - httpApi: ## Creates an API Gateway with POST operation on /todo endpoint
           path: /todo

@@ -36,7 +36,7 @@ All resources are deployed within a custom VPC. The Lambda functions run in priv
 
 ### Visual Diagram
 
-
+![Diagram](images/diagram.png)
 
 ### Application Flow
 
@@ -138,7 +138,7 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
   - You should see a new log stream indicating a successful execution.
 
   <br>
-  *PASTE YOUR `processTodo` LOG SCREENSHOT HERE*
+  ![processTodo Log](images/processTodo.png)
   <br>
 
 - **Check DynamoDB:**
@@ -147,7 +147,7 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
   - You should see the new item `"task": "Buy milk and bread"`.
 
   <br>
-  *PASTE YOUR DYNAMODB TABLE SCREENSHOT HERE*
+  ![dynamoDB](images/dynamoDB.png)
   <br>
 
 **3. Retrieve all To-Do items**
@@ -155,9 +155,13 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
 Run the following `curl` command to `GET` all items.
 
 ```bash
-curl -v "YOUR_API_GATEWAY_URL/todos"
+curl -v -X GET "YOUR_API_GATEWAY_URL/todos"
 ```
 **Expected Outcome:** You should get a `200 OK` response with a JSON body containing a list of your to-do items.
+
+  <br>
+  ![getTodos](images/getTodos.png)
+  <br>
 
 ### Scenario 2: Error Handling & DLQ Testing
 
