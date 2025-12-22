@@ -142,7 +142,7 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
 - **Check DynamoDB:**
   - Go to the AWS Console: `DynamoDB` -> `Tables` -> `todo-table-dev`.
   - Click "Explore table items".
-  - You should see the new item `"task": "Buy milk and bread"`.
+  - You should see the new item `"task": "My First Test Todo"`.
 
 ![dynamoDB](images/dynamoDB.png)
 
@@ -181,18 +181,14 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
 
 - **Check CloudWatch Logs for `processTodo`:** You will see logs showing the function failed 3 times with the error "Simulating a processing error!".
 
-  <br>
-  *PASTE YOUR FAILED `processTodo` LOG SCREENSHOT HERE*
-  <br>
+![processingError](images/processingError.png)
 
 - **Check the Dead-Letter Queue:**
   - Go to the AWS Console: `SQS` -> `Queues`.
   - Find `todo-dlq-dev`.
   - Under "Messages available", you should see `1`. You can click "Send and receive messages" to view the message content.
 
-  <br>
-  *PASTE YOUR SQS DLQ SCREENSHOT HERE*
-  <br>
+ ![DLQmessage](images/DLQmessage.png)
 
 **4. Trigger the Re-Drive Function (Optional)**
 
@@ -201,7 +197,15 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
   ```bash
   serverless invoke -f reDriveDLQ
   ```
+
+![reDrivenLog](images/reDrivenLog.png)
+
 - **Verify:** The message count in `todo-dlq-dev` should go to 0, and you should see a new successful execution log for `processTodo` and a new item in your DynamoDB table.
+
+![newProcessTodolog](images/newProcessTodolog.png)
+
+
+![updatedDB](images/updatedDB.png)
 
 ## Cleanup
 
