@@ -126,7 +126,7 @@ Run the following `curl` command to send a `POST` request to your `/todo` endpoi
 ```bash
 curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
 -H "Content-Type: application/json" \
--d '{"task": "Buy milk and bread"}'
+-d '{"task": "My First Test Todo"}'
 ```
 **Expected Outcome:** You should receive a `200 OK` response.
 
