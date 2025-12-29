@@ -152,6 +152,15 @@ annotations:
   prometheus.io/path: "/metrics"
 ```
 
+## Grafana Dashboard
+![cAdvisor-target](images/Grafana-Dashboard.png)
+
+
+## Alert
+
+![cAdvisor-target](images/Alert.png)
+
+![cAdvisor-target](images/Firing.png)
 ---
 
 ## Troubleshooting
