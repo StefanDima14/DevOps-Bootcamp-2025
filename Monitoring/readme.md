@@ -121,6 +121,8 @@ The scrape configuration for the endpoints is defined as follows:
     # ... other relabeling rules
 ```
 
+![node-exporter-target](images/node-exporter-target.png)
+
 #### cAdvisor
 
 cAdvisor (Container Advisor) comes built-in with Kubelet and exposes container metrics. Prometheus is configured to scrape these metrics with the following job:
@@ -136,6 +138,9 @@ cAdvisor (Container Advisor) comes built-in with Kubelet and exposes container m
       target_label: __metrics_path__
       replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
 ```
+
+![cAdvisor-target](images/cAdvisor-target.png)
+
 
 #### Grafana Metrics
 
