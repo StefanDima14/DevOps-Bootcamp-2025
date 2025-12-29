@@ -121,7 +121,7 @@ The scrape configuration for the endpoints is defined as follows:
     # ... other relabeling rules
 ```
 
-![node-exporter-target](images/node-exporter-target.png)
+![node-exporter-targets](images/node-exporter-targets.png)
 
 #### cAdvisor
 
