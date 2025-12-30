@@ -1,0 +1,8 @@
+cidr_block      = "10.10.0.0/16"
+subnet_a_cidr   = "10.10.1.0/24"
+az_subnet_a     = "eu-west-1a"
+sg_name         = "mutual-ssh"
+key_pair_name   = "nodes-connect"
+ami_id          = "ami-09c54d172e7aa3d9a"
+instance_type   = "t3.micro"
+region          = "eu-west-1"

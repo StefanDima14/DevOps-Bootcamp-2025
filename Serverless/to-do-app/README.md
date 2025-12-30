@@ -207,6 +207,18 @@ curl -v -X POST "YOUR_API_GATEWAY_URL/todo" \
 
 ![updatedDB](images/updatedDB.png)
 
+## Serverless Framework S3 Bucket
+
+When you deploy a service with the Serverless Framework, it automatically creates an S3 bucket in your AWS account. This bucket is essential for the deployment process.
+
+**Why is it created?**
+
+1.  **Deployment Artifacts:** The framework packages your Lambda function code, any dependencies, and the generated CloudFormation template into a `.zip` file. This package is known as a deployment artifact.
+2.  **Storage:** This artifact is uploaded to the dedicated S3 bucket.
+3.  **CloudFormation Source:** AWS CloudFormation, which is used by the framework under the hood to provision all your resources, then accesses this `.zip` file from the S3 bucket to deploy your Lambda functions.
+
+This process ensures reliable and versioned deployments. The bucket is managed by the Serverless Framework, and its name typically includes the service name, stage, and region (e.g., `to-do-app-dev-serverlessdeploymentbucket-xxxx`).
+
 ## Cleanup
 
 To remove all the deployed resources from your AWS account, run the following command:

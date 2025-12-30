@@ -1,0 +1,90 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: pythonVersion
+    value: '3.12'
+  - group: ec2-deploy-app
+
+stages:
+  - stage: Build
+    displayName: 'Build and Test Flask App'
+    jobs:
+      - job: Build
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+              addToPath: true
+
+          - script: |
+              python -m pip install --upgrade pip
+              pip install -r src/requirements.txt
+            displayName: 'Install dependencies'
+
+          - script: |
+              python -m unittest src/test_hello_world.py
+            displayName: 'Run unit tests'
+
+          - task: ArchiveFiles@2
+            displayName: 'Archive Flask app'
+            inputs:
+              rootFolderOrFile: '$(Build.SourcesDirectory)/src'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/flask_app.zip'
+              replaceExistingArchive: true
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Artifact'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'flask_app'
+              publishLocation: 'Container'
+
+  - stage: Deploy
+    displayName: 'Deploy to AWS EC2'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: Deploy
+        steps:
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: 'flask_app'
+              downloadPath: '$(System.ArtifactsDirectory)'
+            displayName: 'Download Build Artifacts'
+          
+          - task: DownloadSecureFile@1
+            name: ec2SSHKey
+            inputs:
+              secureFile: 'nodes-connect'
+            displayName: 'Download SSH Key'
+
+          - script: |
+              chmod 400 $(ec2SSHKey.secureFilePath)
+              scp -o StrictHostKeyChecking=no -i $(ec2SSHKey.secureFilePath) $(System.ArtifactsDirectory)/flask_app.zip $(EC2_USER)@$(EC2_HOST):/home/$(EC2_USER)/
+            displayName: 'Copy Flask App to EC2 via SCP'
+            env:
+              EC2_USER: $(EC2_USER)
+              EC2_HOST: $(EC2_HOST)
+
+          - script: |
+              ssh -o StrictHostKeyChecking=no -i $(ec2SSHKey.secureFilePath) $(EC2_USER)@$(EC2_HOST) '
+                unzip -o /home/$(EC2_USER)/flask_app.zip -d /home/$(EC2_USER)/flask_app &&
+                cd /home/$(EC2_USER)/flask_app &&
+                python3 -m venv venv &&
+                source venv/bin/activate &&
+                pip install -r requirements.txt &&
+                pkill -f "python3 hello_world.py" || true
+                nohup python3 hello_world.py > /dev/null 2>&1 &
+              '
+            displayName: 'Run the app'
+            env:
+              EC2_USER: $(EC2_USER)
+              EC2_HOST: $(EC2_HOST)
