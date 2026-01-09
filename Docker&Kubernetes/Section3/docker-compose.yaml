@@ -7,4 +7,10 @@ services:
     volumes:
       - ./redis-data:/data
   app:
-    
+    image: compose-image:latest
+    container_name: compose-container
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:5000"

@@ -1,0 +1,70 @@
+services:  ## definition of services
+
+# ========================================
+# Application Service
+# ========================================
+  app:
+    ## Build section to create image from a Dockerfile located in the current directory
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nodejs-app-container ## Name of the container
+    ports: ## Port mapping
+      - "${APP_PORT}:3000" 
+    environment: ## Environment variables for the application -> database connection (from .env file)
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on: ## Ensure the app waits for the database to be healthy before starting
+      db:
+        condition: service_healthy
+    restart: unless-stopped ## Restart policy
+    volumes: ## Mount current directory to /usr/src/app in the container, excluding node_modules (Here could be more volumes based on the app configuration)
+      - ./:/usr/src/app
+      - /usr/src/app/node_modules
+    networks: ## Connect to the defined network (App and database should be on the same network)
+      - app-network
+
+# ========================================
+# Database Service
+# ========================================
+  db:
+    ## using a Postgres image from Docker Hub
+    image: postgres:18-alpine
+    container_name: postgres-container ## Name of the container
+    ports: ## Port mapping
+      - "${DB_PORT}:5432"
+    environment: ## Environment variables for Postgres configuration (from .env file)
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data  ## Persisting database data (this will prevent the deletion of the data after the container is stopped or removed)
+    restart: unless-stopped ## Restart policy
+    healthcheck: ## Health check to ensure the database is ready before the app tries to connect to it
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks: ## Connect to the defined network
+      - app-network
+
+# ========================================
+# Volume Configuration
+# ========================================
+volumes: ## Define named volume for Postgres data persistence
+  postgres-data:
+    name: postgres-data
+    driver: local ## Using local driver for volume (on the host machine)
+
+# ========================================
+# Network Configuration
+# ========================================
+
+networks: ## Define a custom network for the application and database to communicate with each other
+  app-network:
+    name: app-network
+    driver: bridge ## Using bridge driver for network -> allows containers on the same host to communicate with each other
