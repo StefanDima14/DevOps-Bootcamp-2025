@@ -1,3 +1,5 @@
+
+# Docker
 # Section 1: Core Concepts
 
 ### Q1.1
@@ -92,3 +94,72 @@ D. Can be shared between containers
 #### You are given a Node.js app that connects to PostgreSQL. Write a docker-compose.yaml and explain how to use .env for DB_USER, DB_PASS and DB_NAME. Add suggestive comments to understand the role of each component used in docker-compose.yaml.
 
 #### Note: View Docker compose file and .env file in Section4 folder
+
+# Kubernetes
+
+### 1. Kubernetes Core Components
+
+**Explain what a Pod is**: A pod is the smallest deployeable and scheduleable unit in Kubernetes. It can have a single container or multiple containers (such as init containers, sidecar containers, etc). The containers inside a pod share storage and network resources. Kubernetes is not managing directly containers, its managing Pods. Pods are ephemeral and are usually managed by controllers like Deployments, statefulsets, deamonsets or jobs.
+
+**What is the role of the kubelet on a worker node**: the kubelet role is to ensure that containers defined in pods actually run and stay running on the worker node. It manages the pod lifecycle, receives the pod specificatio from API server, is ensuring that the containers in the pod are running and healthy and create/delete/restarts the containers as needed. The kubelet is an agent that enforces Pod specs, manages containers, monitor health and keeps the worker node in sync with the Kubernetes cluster.
+
+**List 3 main components of the kubernetes control plane and their purpose**:
+- kube-apiserver: The core component server that exposes the Kubernetes API
+- etcd: The persistant key-value store for cluster state. Stores all cluster data (state) - pods, nodes, secrets, configmaps
+- kube-scheduler: decides which node a Pod should run on. Evaluates the new Pods based on the resources need and schedule them on   the nodes that can satisfy the requirements
+
+### 2. Working with pods and deployments
+
+File: k8s/nginx-deployment.yaml
+
+![nginx](k8s/images/nginx-deployment.png)
+
+
+updating the deployment YAML with the latest image version will trigger a Rolling Upgrade on deployment, meaning that new pods will be created with the new image version, only when the new pods are created and containers are healthy the older pods will be deleted. This Upgate strategy is replacing older pods with newer pods one by one
+
+![nginx](k8s/images/nginx-image.png)
+
+### 3. Kubernetes Services & Networking
+
+File k8s/nginx-service.yaml
+
+In a service definition file what is the most important is the **selector**, it has to point correctly to the Pods with the same label.
+
+Port: 80 -> service is available internally on port 80
+TargetPort: 80 -> points to the containerPort set on the pods
+Type: ClusterIP -> it means that the service will be only exposed internally on the cluster (will assign an internal IP)
+
+![nginx](k8s/images/nginx-service.png)
+
+**Explain how kube-proxy helps with service networking**: the kube-proxy is a network agent that runs on each node and watches for new Services and Endpoints (Pods) and writes the routing rules on each node so when a service is accessed the traffic is routed to the correct pods.
+
+**What is the role of DNS in Kubernetes networking**: DNS stands for Domain Name Sysyem and it basically translates the IP addresses to names foe ease of use. The same idea is in the Kubernetes scenario. DNS allows Pods to find each other using juman-redeable names instead of IP addresses (an IP address is temporary, if the pods is recreated it will have a new IP address). In Kubernetes, every service resource gets a FQDN (Fully Qualified Domain Name) following the strcuture [service-name].[namespace].svc.cluster.local. Having thins FQDN a pod from a namespace can reach a service from another namespace by using the actual DNS name not the IP address.
+
+**Deploy a second service using NodePort**
+
+NodePort: exposes the service on each node's IP at a static port. Used for exposing the service outside the cluster when a loadbalancer is not used (recommanded for testing purposes)
+
+![nginx](k8s/images/nginx-nodeport.png)
+
+### 4. Helm Basics
+
+![nginx](k8s/images/helm-repo.png)
+
+![nginx](k8s/images/helm-redis.png)
+
+![nginx](k8s/images/helm-redis-resources.png)
+
+**What is the function of values.yaml in Helm**: values.yaml serves a default configuration for the chart. It defines all the configurable parameters that the chart templates can use when rendaring Kubernetes manifests.
+
+### 5. Horizontal Pod Autoscaler
+
+**Enable the metrics-server on minikube cluster** Using the command **minikube addons enable metrics-server** the metrics-server will be enabled on the cluster
+
+![nginx](k8s/images/nginx-hpa.png)
+
+**Simulate load test**: the most simple way to simulate load to test if the HPA works is to connect to a nginx pod and to run **while true; do:; done** this is an infinite shell loop that will cause an increase of CPU utilization
+
+![nginx](k8s/images/high-cpu.png)
+
+![nginx](k8s/images/hpa-trigger.png)
+

@@ -10,3 +10,4 @@ __pycache__/
 venv/
 nodes-connect
 nodes-connect.pub
+redis-data/
