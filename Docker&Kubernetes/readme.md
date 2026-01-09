@@ -193,24 +193,28 @@ Essentially, managed node groups offer more control and customization, while Far
 
 Created docker image with Dockerfile, test if everything works with docker compose
 
-Tag the local image with the command: 
-**docker tag challenge-app stefandima1407/docker-learning:1.0.0**
+Tag the local image with the command: **docker tag challenge-app stefandima1407/docker-learning:1.0.0**
 
-Push the image to personal registry:
+Push the image to personal registry: **docker push stefandima1407/docker-learning:1.0.0**
 
-**docker push stefandima1407/docker-learning:1.0.0**
-
-Written all the templates to build a helm chart. Test the rendered manifests with the values from values.yaml with this command resulting a file with rendered manifests
-
-**helm template my-2tier-app . > rendered.yaml**
+Written all the templates to build a helm chart. Test the rendered manifests with the values from values.yaml with this command resulting a file with rendered manifests: **helm template my-2tier-app . > rendered.yaml**
 
 Install helm chart
 
-**cd k8s/challenge/flaskapp**
-**helm install my-app . --namespace my-app --create-namespace**
+```bash
+cd k8s/challenge/flaskapp
+helm install my-app . --namespace my-app --create-namespace
+```
 
-![nginx](k8s/images/my-helm-app.png)
+![nginx](k8s/images/my-app-helm.png)
 
 The service for the frontend app has type of NodePort which means that the service will be available outside of the cluster. To expose it and access the service from browser we will use the minikube command **minikube service -n my-app --url my-app-frontend-service** that will map an node port to the application, then access the URL given in the response
 
 ![nginx](k8s/images/my-app.png)
+
+### Traffic Flow
+
+1.  **User Request**: The user initiates a request via the browser to the URL provided by Minikube. This URL points to the Minikube Node's IP and the specific **NodePort** exposed by the service.
+2.  **Service Layer**: The Kubernetes Service (`my-app-frontend-service`) receives the traffic on the NodePort. It acts as a stable entry point and load balancer.
+3.  **Pod Routing**: The Service identifies healthy Pods that match its label selector and forwards the request to the target port on one of the Flask application Pods.
+4.  **Container Processing**: The Flask application running inside the container processes the HTTP request and sends the response back to the user.
