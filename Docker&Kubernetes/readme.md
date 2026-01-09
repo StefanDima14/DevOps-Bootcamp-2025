@@ -163,3 +163,54 @@ NodePort: exposes the service on each node's IP at a static port. Used for expos
 
 ![nginx](k8s/images/hpa-trigger.png)
 
+### 6. Monitoring and Debugging
+
+To fail a pod I will use a bad Image name that will cause an ErrImagePull (image: nginx:badlatest)
+
+This error is straightforward and it says that is something wrong with the image name (or a problem with the image registry)
+
+using **kubectl descripe pod <pod_name> -n <namespace>** we can see the error described in the events section
+
+![nginx](k8s/images/podError.png)
+
+using **kubectl logs <pod_name> -n <namespace>** we can see the same error 
+
+![nginx](k8s/images/podErrorLogs.png)
+
+A pod can fail due to multiple factors. In this case it was due to a bad image used for the containers, but it can also fail because the app in the container is failling. It can also fail due to bad environment variables that the container is expecting to receive at runtime and for some reason they are missing, or a bad mount of a secret or a config map. The CrashLoopBackOff error is the most common error and it masks multiple reasons of failing, that is why it needs a more sustained troubleshooting.
+
+### 7. EKS and IAM integrarion
+
+**Explain the difference between managed node groups and Fargate profiles in EKS**
+
+In Amazon EKS, managed node groups and Fargate profiles both run workloads but differ in infrastructure management and flexibility. 
+**Managed node groups** provision EC2 instances as worker nodes, giving you control over instance types, scaling, and OS-level configuration, but requiring management of nodes, updates, and capacity. 
+**Fargate profiles** run pods serverlessly without exposing or managing EC2 instances; you define which pods run on Fargate via selectors, and AWS handles provisioning, scaling, and patching automatically. 
+
+Essentially, managed node groups offer more control and customization, while Fargate provides simplicity and operational abstraction.
+
+### 8. Challenge
+
+Created docker image with Dockerfile, test if everything works with docker compose
+
+Tag the local image with the command: 
+**docker tag challenge-app stefandima1407/docker-learning:1.0.0**
+
+Push the image to personal registry:
+
+**docker push stefandima1407/docker-learning:1.0.0**
+
+Written all the templates to build a helm chart. Test the rendered manifests with the values from values.yaml with this command resulting a file with rendered manifests
+
+**helm template my-2tier-app . > rendered.yaml**
+
+Install helm chart
+
+**cd k8s/challenge/flaskapp**
+**helm install my-app . --namespace my-app --create-namespace**
+
+![nginx](k8s/images/my-helm-app.png)
+
+The service for the frontend app has type of NodePort which means that the service will be available outside of the cluster. To expose it and access the service from browser we will use the minikube command **minikube service -n my-app --url my-app-frontend-service** that will map an node port to the application, then access the URL given in the response
+
+![nginx](k8s/images/my-app.png)

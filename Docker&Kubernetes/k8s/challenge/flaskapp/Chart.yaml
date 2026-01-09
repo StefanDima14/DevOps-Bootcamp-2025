@@ -1,0 +1,6 @@
+apiVersion: v2
+name: my-2tier-app
+description: A Helm chart for a frontend web app and Redis backend
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
