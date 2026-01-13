@@ -20,6 +20,54 @@ variables:
   value: 'neonews'
 
 stages:
+- stage: Infrastructure
+  displayName: Deploy Infrastructure
+  jobs:
+  - job: terraform
+    displayName: Deploy Infrastructure with Terraform
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - task: TerraformInstaller@0
+        displayName: Install Terraform
+        inputs:
+          terraformVersion: 'latest'
+      - task: TerraformCLI@0
+        displayName: "Check Terraform Version"
+        inputs:
+          command: version
+      - script: |
+          cd Final\ Boss/neonews/infra
+
+          echo "----------------------Initializing Terraform...----------------------"
+          terraform init
+          echo "----------------------Terraform initialized.----------------------"
+
+        displayName: 'Terraform Init'
+        env:
+          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      - script: |
+          cd Final\ Boss/neonews/infra
+
+          echo "----------------------Terraform Plan...----------------------"
+          terraform plan
+
+        displayName: 'Terraform Plan'
+        env:
+          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      - script: |
+          cd Final\ Boss/neonews/infra
+
+          echo "----------------------Terraform Apply...----------------------"
+          terraform apply -auto-approve
+        displayName: 'Terraform Apply'
+        env:
+          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        manualValidation: true
+
 - stage: Build
   displayName: Build image
   jobs:
@@ -43,6 +91,8 @@ stages:
         # Tag and Push
         docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
         docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+
+        echo "Pushed image to ECR: $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)"
       displayName: 'Push to ECR via AWS CLI'
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
