@@ -10,6 +10,10 @@ parameters:
   displayName: "Execute Terraform Apply"
   type: boolean
   default: false
+- name: destroyApply
+  displayName: "Execute Terraform Destroy"
+  type: boolean
+  default: false
 
 resources:
 - repo: self
@@ -82,6 +86,15 @@ stages:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       # condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
+    - script:
+        echo "----------------------Terraform Destroy...----------------------"
+        terraform destroy -auto-approve
+      displayName: 'Terraform Destroy'
+      workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      condition: and(succeeded(), eq('${{ parameters.destroyApply }}', true))
 
 - stage: Build
   displayName: Build image
@@ -158,7 +171,7 @@ stages:
         echo "" >> fixed_key
         chmod 400 fixed_key
         ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
-          'aws ecr get-login-password --region $(awsRegion) | docker login --usarname AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com &&
+          'aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com &&
            docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
            docker stop python-app || true &&
            docker rm python-app || true &&
