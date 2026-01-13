@@ -86,7 +86,9 @@ stages:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       # condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
-    - script: echo "----------------------Terraform Destroy...----------------------" terraform destroy -auto-approve
+    - script: |
+        echo "----------------------Terraform Destroy...----------------------"
+        terraform destroy -auto-approve
       displayName: 'Terraform Destroy'
       workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
       env:
