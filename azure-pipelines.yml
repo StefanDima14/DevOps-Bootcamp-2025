@@ -39,7 +39,7 @@ stages:
         displayName: 'Check Terraform Version'
 
       - script: |
-          cd Final\ Boss/neonews/infra
+          cd Final\ Boss/neonews/terraform
 
           echo "----------------------Initializing Terraform...----------------------"
           terraform init
@@ -50,7 +50,7 @@ stages:
           AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       - script: |
-          cd Final\ Boss/neonews/infra
+          cd Final\ Boss/neonews/terraform
 
           echo "----------------------Terraform Plan...----------------------"
           terraform plan
@@ -60,7 +60,7 @@ stages:
           AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       # - script: |
-      #     cd Final\ Boss/neonews/infra
+      #     cd Final\ Boss/neonews/terraform
 
       #     echo "----------------------Terraform Apply...----------------------"
       #     terraform apply -auto-approve
