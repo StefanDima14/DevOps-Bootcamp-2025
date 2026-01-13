@@ -57,16 +57,16 @@ stages:
         env:
           AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      - script: |
-          cd Final\ Boss/neonews/infra
+      # - script: |
+      #     cd Final\ Boss/neonews/infra
 
-          echo "----------------------Terraform Apply...----------------------"
-          terraform apply -auto-approve
-        displayName: 'Terraform Apply'
-        env:
-          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        manualValidation: true
+      #     echo "----------------------Terraform Apply...----------------------"
+      #     terraform apply -auto-approve
+      #   displayName: 'Terraform Apply'
+      #   env:
+      #     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+      #     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      #   manual: true
 
 - stage: Build
   displayName: Build image
