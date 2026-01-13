@@ -10,8 +10,10 @@ resources:
 
 variables:
 - group: aws-ecr
+- name: patchVersion
+  value: $[counter('newonewsPatchVersion', 0)]
 - name: tag
-  value: '$(Build.BuildId)'
+  value: '1.0.$(patchVersion)'
 - name: awsRegion
   value: 'eu-west-1'
 - name: repoName
@@ -39,8 +41,8 @@ stages:
         aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com
 
         # Tag and Push
-        docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
-        docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+        docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName)/neonews:$(tag)
+        docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName)/neonews:$(tag)
       displayName: 'Push to ECR via AWS CLI'
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
