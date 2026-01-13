@@ -86,9 +86,7 @@ stages:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       # condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
-    - script:
-        echo "----------------------Terraform Destroy...----------------------"
-        terraform destroy -auto-approve
+    - script: echo "----------------------Terraform Destroy...----------------------" terraform destroy -auto-approve
       displayName: 'Terraform Destroy'
       workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
       env:
@@ -177,11 +175,12 @@ stages:
            docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
            docker stop python-app || true &&
            docker rm python-app || true &&
-           docker run -d -p 8080:5000 --name python-app $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) \
+           docker run -d -p 8080:5000 --name python-app \
             -e NEWSDATA_API_KEY=$(NEWSDATA_API_KEY) \
             -e AWS_REGION=eu-west-1 \
             -e DYNAMODB_TABLE=neonews-demo \
-            -e S3_BUCKET_NAME=neonews-bucket-demo-123
+            -e S3_BUCKET_NAME=neonews-bucket-demo-123 \
+            $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
           '
       displayName: 'Deploy Docker Container on EC2'
       env:
