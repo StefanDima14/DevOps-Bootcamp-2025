@@ -131,8 +131,11 @@ stages:
       inputs:
         secureFile: 'nodes-connect'
     - script: |
-        chmod 400 $(sshKey.secureFilePath)
-        ssh -o StrictHostKeyChecking=no -i $(sshKey.secureFilePath) ubuntu@$(EC2_HOST)
+        # Fix line endings (CRLF -> LF) and ensure trailing newline
+        cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
+        echo "" >> fixed_key
+        chmod 400 fixed_key
+        ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
           'sudo apt-get update -y
            sudo apt-get install -y docker.io
            sudo systemctl start docker
