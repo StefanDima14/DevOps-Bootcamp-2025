@@ -5,6 +5,12 @@
 trigger:
 - main
 
+parameters:
+  - name: executeApply
+    displayName: "Execute Terraform Apply"
+    type: boolean
+    default: false
+
 resources:
 - repo: self
 
@@ -39,45 +45,38 @@ stages:
           echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update && sudo apt-get install terraform
           
-          echo "----------------------Copying SSH Key...----------------------"
           cp $(sshKey.secureFilePath) "$(Build.Repository.LocalPath)/Final Boss/neonews/terraform/nodes-connect.pub"
-          echo "----------------------SSH Key Copied.----------------------"
         displayName: 'Install Terraform Manually'
 
       - script: terraform version
         displayName: 'Check Terraform Version'
 
       - script: |
-          cd Final\ Boss/neonews/terraform
-
           echo "----------------------Initializing Terraform...----------------------"
           terraform init
           echo "----------------------Terraform initialized.----------------------"
-
         displayName: 'Terraform Init'
+        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
         env:
           AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
       - script: |
-          cd Final\ Boss/neonews/terraform
-
           echo "----------------------Terraform Plan...----------------------"
           terraform plan
-
         displayName: 'Terraform Plan'
+        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
         env:
           AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      # - script: |
-      #     cd Final\ Boss/neonews/terraform
-
-      #     echo "----------------------Terraform Apply...----------------------"
-      #     terraform apply -auto-approve
-      #   displayName: 'Terraform Apply'
-      #   env:
-      #     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-      #     AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      #   manual: true
+      - script: |
+          echo "----------------------Terraform Apply...----------------------"
+          terraform apply -auto-approve
+        displayName: 'Terraform Apply'
+        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
+        env:
+          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
 
 - stage: Build
   displayName: Build image
