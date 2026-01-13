@@ -6,10 +6,10 @@ trigger:
 - main
 
 parameters:
-  - name: executeApply
-    displayName: "Execute Terraform Apply"
-    type: boolean
-    default: false
+- name: executeApply
+  displayName: "Execute Terraform Apply"
+  type: boolean
+  default: false
 
 resources:
 - repo: self
@@ -34,49 +34,54 @@ stages:
     pool:
       vmImage: ubuntu-latest
     steps:
-      - task: DownloadSecureFile@1
-        name: sshKey
-        displayName: 'Download SSH Key'
-        inputs:
-          secureFile: 'nodes-connect.pub'
-      - script: |
-          sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
-          wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt-get update && sudo apt-get install terraform
-          
-          cp $(sshKey.secureFilePath) "$(Build.Repository.LocalPath)/Final Boss/neonews/terraform/nodes-connect.pub"
-        displayName: 'Install Terraform Manually'
+    - task: DownloadSecureFile@1
+      name: sshKey
+      displayName: 'Download SSH Key'
+      inputs:
+        secureFile: 'nodes-connect.pub'
+    - script: |
+        sudo apt-get update && sudo apt-get install -y gnupg software-properties-common
+        wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+        sudo apt-get update && sudo apt-get install terraform
 
-      - script: terraform version
-        displayName: 'Check Terraform Version'
+        cp $(sshKey.secureFilePath) "$(Build.Repository.LocalPath)/Final Boss/neonews/terraform/nodes-connect.pub"
+      displayName: 'Install Terraform Manually'
 
-      - script: |
-          echo "----------------------Initializing Terraform...----------------------"
-          terraform init
-          echo "----------------------Terraform initialized.----------------------"
-        displayName: 'Terraform Init'
-        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
-        env:
-          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      - script: |
-          echo "----------------------Terraform Plan...----------------------"
-          terraform plan
-        displayName: 'Terraform Plan'
-        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
-        env:
-          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      - script: |
-          echo "----------------------Terraform Apply...----------------------"
-          terraform apply -auto-approve
-        displayName: 'Terraform Apply'
-        workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
-        env:
-          AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
+    - script: terraform version
+      displayName: 'Check Terraform Version'
+
+    - script: |
+        echo "----------------------Initializing Terraform...----------------------"
+        terraform init
+        echo "----------------------Terraform initialized.----------------------"
+      displayName: 'Terraform Init'
+      workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    - script: |
+        echo "----------------------Terraform Plan...----------------------"
+        terraform plan
+      displayName: 'Terraform Plan'
+      workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    - script: |
+        echo "----------------------Terraform Apply...----------------------"
+        if [[ $(terraform plan | grep -c "\b0 to destroy\b") -ne 1 ]] && [[ $(terraform plan | grep -c "No changes") -ne 1 ]]; then echo "Destroy activated" && exit 1; fi
+        terraform apply -auto-approve
+
+        EC2_HOST=$(terraform output -raw ec2_public_ip)
+        echo "##vso[task.setvariable variable=EC2_HOST;isOutput=true]$EC2_HOST"
+      name: TerraformApply
+      displayName: 'Terraform Apply'
+      workingDirectory: '$(Build.SourcesDirectory)/Final Boss/neonews/terraform'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
 
 - stage: Build
   displayName: Build image
@@ -108,3 +113,39 @@ stages:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
         AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
+
+- stage: Deploy
+  displayName: Deploy to EC2
+  dependsOn:
+  - Infrastructure
+  - Build
+  jobs:
+  - job: Deploy
+    displayName: Deploy to EC2
+    variables:
+      EC2_HOST: $[ stageDependencies.Infrastructure.terraform.outputs['TerraformApply.EC2_HOST'] ]
+    steps:
+    - task: DownloadSecureFile@1
+      name: sshKey
+      displayName: 'Download SSH Key'
+      inputs:
+        secureFile: 'nodes-connect.pub'
+    - script: |
+        chmod 400 $(sshKey.secureFilePath)
+        ssh -o StrictHostKeyChecking=no -i $(sshKey.secureFilePath) ubuntu@$(EC2_HOST)
+          'sudo apt-get update -y
+           sudo apt-get install -y docker.io
+           sudo systemctl start docker
+           sudo systemctl enable docker
+           sudo usermod -aG docker ubuntu
+           docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
+           docker stop python-app || true &&
+           docker rm python-app || true &&
+           docker run -d -p 8080:5000 --name python-app \
+           $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)'
+      displayName: 'Deploy to EC2 via SSH'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
+        EC2_HOST: $(EC2_HOST)

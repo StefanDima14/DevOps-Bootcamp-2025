@@ -100,8 +100,50 @@ resource "aws_key_pair" "nodes_connect" {
   key_name   = var.key_pair_name
   public_key = file("${path.module}/nodes-connect.pub")
 }
-# EC2 Instance in Subnet A
 
+### IAM ROLE for EC2 Instance
+
+resource "aws_iam_role" "ec2_ecr_role" {
+  name = "EC2-ECR-Pull-Role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+# DynamoDB Full Access
+resource "aws_iam_role_policy_attachment" "dynamo_db" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+}
+# ECR Read Only (to pull your docker images)
+resource "aws_iam_role_policy_attachment" "ecr_read" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+# S3 Full Access
+resource "aws_iam_role_policy_attachment" "s3_full" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+
+# EC2 Instance Profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "EC2-Instance-Profile"
+  role = aws_iam_role.ec2_ecr_role.name
+}
+
+# EC2 Instance in Subnet A
 resource "aws_instance" "node_a" {
   ami                    = var.ami_id
   instance_type          = var.instance_type
@@ -109,6 +151,7 @@ resource "aws_instance" "node_a" {
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
   key_name               = aws_key_pair.nodes_connect.key_name
   associate_public_ip_address = true
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   tags = {
     Name = "NodeA"
   }
