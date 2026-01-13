@@ -10,7 +10,7 @@ parameters:
   displayName: "Execute Terraform Apply"
   type: boolean
   default: false
-- name: destroyApply
+- name: destroy
   displayName: "Execute Terraform Destroy"
   type: boolean
   default: false
@@ -94,7 +94,7 @@ stages:
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      condition: and(succeeded(), eq('${{ parameters.destroyApply }}', true))
+      condition: and(succeeded(), eq('${{ parameters.destroy }}', true))
 
 - stage: Build
   displayName: Build image
