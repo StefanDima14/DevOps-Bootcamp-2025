@@ -177,11 +177,11 @@ stages:
            docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
            docker stop python-app || true &&
            docker rm python-app || true &&
-           docker run -d -p 80:5000 --name python-app $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) \
+           docker run -d -p 8080:5000 --name python-app $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) \
             -e NEWSDATA_API_KEY=$(NEWSDATA_API_KEY) \
             -e AWS_REGION=eu-west-1 \
             -e DYNAMODB_TABLE=neonews-demo \
-            -e S3_BUCKET_NAME=neonews-bucket-demo-123'
+            -e S3_BUCKET_NAME=neonews-bucket-demo-123
           '
       displayName: 'Deploy Docker Container on EC2'
       env:
