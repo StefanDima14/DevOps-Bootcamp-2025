@@ -129,7 +129,7 @@ stages:
       name: sshKey
       displayName: 'Download SSH Key'
       inputs:
-        secureFile: 'nodes-connect.pem'
+        secureFile: 'nodes-connect'
     - script: |
         chmod 400 $(sshKey.secureFilePath)
         ssh -o StrictHostKeyChecking=no -i $(sshKey.secureFilePath) ubuntu@$(EC2_HOST)
