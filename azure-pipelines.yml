@@ -24,6 +24,6 @@ stages:
       displayName: Build an image
       inputs:
         command: build
-        dockerfile: '$(Build.SourcesDirectory)/Final Boss/neonews/docker/Dockerfile'
+        dockerfile: '$(Build.SourcesDirectory)/Final Boss/neonews/Dockerfile'
         tags: |
           $(tag)

@@ -1,6 +1,6 @@
 #-------BUILD STAGE--------
 
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 WORKDIR /app
 COPY src/ .
 
@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 #-------FINAL STAGE--------
 
-FROM python:3.12-slim as release
+FROM python:3.12-slim AS release
 WORKDIR /app
 COPY --from=base /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=base /app /app
