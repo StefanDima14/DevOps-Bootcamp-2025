@@ -17,7 +17,7 @@ variables:
 - name: awsRegion
   value: 'eu-west-1'
 - name: repoName
-  value: 'learn/images'
+  value: 'neonews'
 
 stages:
 - stage: Build
@@ -41,8 +41,8 @@ stages:
         aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com
 
         # Tag and Push
-        docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName)/neonews:$(tag)
-        docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName)/neonews:$(tag)
+        docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+        docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
       displayName: 'Push to ECR via AWS CLI'
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
