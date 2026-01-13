@@ -81,7 +81,7 @@ stages:
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-      condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
+      # condition: and(succeeded(), eq('${{ parameters.executeApply }}', true))
 
 - stage: Build
   displayName: Build image

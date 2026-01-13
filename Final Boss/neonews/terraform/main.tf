@@ -66,7 +66,7 @@ resource "aws_security_group" "allow_ssh" {
 # Inboud rule to allow SSH from subnet A
 resource "aws_vpc_security_group_ingress_rule" "allow_22_port" {
   security_group_id = aws_security_group.allow_ssh.id
-  cidr_ipv4        = var.subnet_a_cidr
+  cidr_ipv4        = "0.0.0.0/0"
   from_port        = 22
   to_port          = 22
   ip_protocol      = "tcp"
