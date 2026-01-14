@@ -137,12 +137,12 @@ resource "aws_iam_role_policy_attachment" "s3_full" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-resource "aws_iam_role_policy_attachment" "s3_full" {
+resource "aws_iam_role_policy_attachment" "cw_full" {
   role       = aws_iam_role.ec2_ecr_role.name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
 }
 
-resource "aws_iam_role_policy_attachment" "s3_full" {
+resource "aws_iam_role_policy_attachment" "ssm_full" {
   role       = aws_iam_role.ec2_ecr_role.name
   policy_arn = "arn:aws:iam::aws:policy/SSMFullAccess"
 }
