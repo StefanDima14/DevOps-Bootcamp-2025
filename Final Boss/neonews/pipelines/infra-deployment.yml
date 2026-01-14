@@ -68,21 +68,21 @@ stages:
         EC2_HOST=$(terraform output -raw ec2_public_ip)
         echo "##vso[task.setvariable variable=EC2_HOST;isOutput=true]$EC2_HOST"
 
-        GROUP_ID=$(az pipelines variable-group list \
-          --org "https://dev.azure.com/bogdanbuciu/" \
-          --project "Test-pipelines" \
-          --group-name "aws-ecr" \
-          --query "[0].id" \
-          --output tsv)
+        # GROUP_ID=$(az pipelines variable-group list \
+        #   --org "https://dev.azure.com/bogdanbuciu/" \
+        #   --project "Test-pipelines" \
+        #   --group-name "aws-ecr" \
+        #   --query "[0].id" \
+        #   --output tsv)
 
-        echo "The ID for aws-ecr is: $GROUP_ID"
-        echo "Updating EC2_HOST in variable group aws-ecr..."
-        az pipelines variable-group variable update \
-        --group-id $GROUP_ID \
-        --org "https://dev.azure.com/bogdanbuciu/" \
-        --project "Test-pipelines" \
-        --name EC2_HOST \
-        --value "$EC2_HOST"
+        # echo "The ID for aws-ecr is: $GROUP_ID"
+        # echo "Updating EC2_HOST in variable group aws-ecr..."
+        # az pipelines variable-group variable update \
+        # --group-id $GROUP_ID \
+        # --org "https://dev.azure.com/bogdanbuciu/" \
+        # --project "Test-pipelines" \
+        # --name EC2_HOST \
+        # --value "$EC2_HOST"
 
       name: TerraformApply
       displayName: 'Terraform Apply'
