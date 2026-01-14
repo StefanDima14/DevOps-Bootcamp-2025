@@ -10,12 +10,6 @@ app.secret_key = 'dev-secret-key'  # Required for flash messages
 api = ApiClient()
 aws = AWSClient()
 
-# Ensure AWS resources exist on startup
-try:
-    aws.init_resources()
-except Exception as e:
-    print(f"Warning: AWS Resource initialization failed: {e}")
-
 def save_async(articles, topic):
     """Background task to save articles without blocking the UI."""
     # Create a new client for thread safety
