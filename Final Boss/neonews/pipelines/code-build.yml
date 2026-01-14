@@ -94,8 +94,6 @@ stages:
   jobs:
   - job: Deploy
     displayName: Deploy to EC2
-    variables:
-      EC2_HOST: $(EC2_HOST)
     steps:
     - task: DownloadSecureFile@1
       name: sshKey
