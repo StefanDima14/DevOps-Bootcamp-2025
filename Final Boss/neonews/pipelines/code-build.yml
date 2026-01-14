@@ -118,8 +118,8 @@ stages:
              sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
            fi
            aws --version'
-           wget https://s3.amazonaws.com/amazoncloudwatch-agent/linux/amd64/latest/AmazonCloudWatchAgent.zip
-           unzip AmazonCloudWatchAgent.zip
+           wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/linux/amd64/latest/AmazonCloudWatchAgent.zip
+           unzip -q AmazonCloudWatchAgent.zip
            sudo ./install.sh
            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:/alarm/AWS-CWAgentLinConfig -s
       displayName: 'Install Prerequisites on EC2'
@@ -138,6 +138,10 @@ stages:
            docker stop python-app || true &&
            docker rm python-app || true &&
            docker run -d -p 8080:5000 --name python-app \
+            --log-driver=awslogs \
+            --log-opt awslogs-region=$(awsRegion) \
+            --log-opt awslogs-group=/neonews/python-app \
+            --log-opt awslogs-create-group=true \
             -e NEWSDATA_API_KEY=$(NEWSDATA_API_KEY) \
             -e AWS_REGION=$(awsRegion) \
             -e DYNAMODB_TABLE=$(DYNAMODB_TABLE) \

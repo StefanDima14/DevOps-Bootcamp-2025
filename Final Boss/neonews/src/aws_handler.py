@@ -1,10 +1,13 @@
 import boto3
 import json
 import uuid
+import logging
 from datetime import datetime
 from rich import print as rprint
 from botocore.exceptions import ClientError
 from config import AWS_REGION, DYNAMODB_TABLE, S3_BUCKET_NAME
+
+logger = logging.getLogger(__name__)
 
 class AWSClient:
     def __init__(self):
@@ -70,8 +73,9 @@ class AWSClient:
         }
         try:
             table.put_item(Item=item)
+            logger.info(f"Successfully saved article metadata to DynamoDB. ID: {article_id}")
         except Exception as e:
-            print(f"[DynamoDB ERROR] Could not save article: {e}")
+            logger.error(f"[DynamoDB ERROR] Could not save article: {e}")
             return False
 
         # Save full content to S3
@@ -83,8 +87,9 @@ class AWSClient:
                     Body=json.dumps(article, indent=2),
                     ContentType='application/json'
                 )
+                logger.info(f"Successfully saved article content to S3. Key: {item['s3_key']}")
             except Exception as e:
-                print(f"[S3 ERROR] Could not save article content: {e}")
+                logger.error(f"[S3 ERROR] Could not save article content: {e}")
                 return False
         
         return True

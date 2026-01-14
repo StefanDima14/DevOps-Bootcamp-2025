@@ -1,13 +1,18 @@
 import requests
+import logging
 from config import NEWSDATA_API_KEY
+
+logger = logging.getLogger(__name__)
 
 class ApiClient:
     def get_country_details(self, country_name):
         """Fetches capital, currency, and language from REST Countries."""
         url = f"https://restcountries.com/v3.1/name/{country_name}?fullText=true"
+        logger.debug(f"Requesting country details from: {url}")
         response = requests.get(url)
         
         if response.status_code != 200:
+            logger.error(f"Failed to fetch country details for '{country_name}'. Status: {response.status_code}")
             return None
 
         data = response.json()[0]
@@ -34,9 +39,11 @@ class ApiClient:
             "language": language
         }
         
+        logger.debug(f"Requesting news from NewsData.io for country: {country_code}, topic: {topic}")
         response = requests.get(base_url, params=params)
         
         if response.status_code != 200:
+            logger.error(f"Failed to fetch news. Status: {response.status_code}, Response: {response.text}")
             return []
 
         data = response.json()
