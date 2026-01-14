@@ -40,7 +40,11 @@ stages:
         export PYTHONPATH=$PYTHONPATH:"$(Build.SourcesDirectory)/Final Boss/neonews/src"
         python -m pytest "$(Build.SourcesDirectory)/Final Boss/neonews/tests/test_app.py"
       displayName: 'Run unit tests'
-
+      env:
+        NEWSDATA_API_KEY: 'test-key'
+        DYNAMODB_TABLE: 'neonews-demo'
+        S3_BUCKET_NAME: 'neonews-bucket-demo-123'
+        AWS_REGION: 'eu-west-1'
 - stage: Build
   dependsOn: Test
   condition: succeeded()
@@ -83,66 +87,66 @@ stages:
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
         AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
 
-- stage: Deploy
-  displayName: Deploy to EC2
-  dependsOn: Build
-  condition: succeeded()
-  jobs:
-  - job: Deploy
-    displayName: Deploy to EC2
-    variables:
-      EC2_HOST: $(EC2_HOST)
-    steps:
-    - task: DownloadSecureFile@1
-      name: sshKey
-      displayName: 'Download SSH Key'
-      inputs:
-        secureFile: 'nodes-connect'
-    - script: |
-        # Fix line endings (CRLF -> LF) and ensure trailing newline
-        cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
-        echo "" >> fixed_key
-        chmod 400 fixed_key
-        ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
-          'sudo apt-get update -y
-           sudo apt-get install -y docker.io
-           sudo systemctl start docker
-           sudo systemctl enable docker
-           sudo usermod -aG docker ubuntu
-           sudo apt install unzip -y
-           if ! aws --version; then
-             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-             unzip -o awscliv2.zip
-             sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
-           fi
-           aws --version'
-      displayName: 'Install Docker on EC2'
-      env:
-        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
-        EC2_HOST: $(EC2_HOST)
-    - script: |
-        # Fix line endings (CRLF -> LF) and ensure trailing newline
-        cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
-        echo "" >> fixed_key
-        chmod 400 fixed_key
-        ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
-          'aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com &&
-           docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
-           docker stop python-app || true &&
-           docker rm python-app || true &&
-           docker run -d -p 8080:5000 --name python-app \
-            -e NEWSDATA_API_KEY=$(NEWSDATA_API_KEY) \
-            -e AWS_REGION=eu-west-1 \
-            -e DYNAMODB_TABLE=neonews-demo \
-            -e S3_BUCKET_NAME=neonews-bucket-demo-123 \
-            $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
-          '
-      displayName: 'Deploy Docker Container on EC2'
-      env:
-        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
-        NEWSDATA_API_KEY: $(NEWSDATA_API_KEY)
-        EC2_HOST: $(EC2_HOST)
+# - stage: Deploy
+#   displayName: Deploy to EC2
+#   dependsOn: Build
+#   condition: succeeded()
+#   jobs:
+#   - job: Deploy
+#     displayName: Deploy to EC2
+#     variables:
+#       EC2_HOST: $(EC2_HOST)
+#     steps:
+#     - task: DownloadSecureFile@1
+#       name: sshKey
+#       displayName: 'Download SSH Key'
+#       inputs:
+#         secureFile: 'nodes-connect'
+#     - script: |
+#         # Fix line endings (CRLF -> LF) and ensure trailing newline
+#         cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
+#         echo "" >> fixed_key
+#         chmod 400 fixed_key
+#         ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
+#           'sudo apt-get update -y
+#            sudo apt-get install -y docker.io
+#            sudo systemctl start docker
+#            sudo systemctl enable docker
+#            sudo usermod -aG docker ubuntu
+#            sudo apt install unzip -y
+#            if ! aws --version; then
+#              curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#              unzip -o awscliv2.zip
+#              sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
+#            fi
+#            aws --version'
+#       displayName: 'Install Docker on EC2'
+#       env:
+#         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+#         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+#         AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
+#         EC2_HOST: $(EC2_HOST)
+#     - script: |
+#         # Fix line endings (CRLF -> LF) and ensure trailing newline
+#         cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
+#         echo "" >> fixed_key
+#         chmod 400 fixed_key
+#         ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) \
+#           'aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com &&
+#            docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
+#            docker stop python-app || true &&
+#            docker rm python-app || true &&
+#            docker run -d -p 8080:5000 --name python-app \
+#             -e NEWSDATA_API_KEY=$(NEWSDATA_API_KEY) \
+#             -e AWS_REGION=eu-west-1 \
+#             -e DYNAMODB_TABLE=neonews-demo \
+#             -e S3_BUCKET_NAME=neonews-bucket-demo-123 \
+#             $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+#           '
+#       displayName: 'Deploy Docker Container on EC2'
+#       env:
+#         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+#         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+#         AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
+#         NEWSDATA_API_KEY: $(NEWSDATA_API_KEY)
+#         EC2_HOST: $(EC2_HOST)
