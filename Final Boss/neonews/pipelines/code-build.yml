@@ -1,0 +1,33 @@
+trigger: none
+
+stages:
+- stage: Build
+  displayName: Build image
+  jobs:
+  - job: BuildAndPush
+    displayName: Build and Push
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - task: Docker@2
+      displayName: Build an image
+      inputs:
+        command: build
+        dockerfile: '$(Build.SourcesDirectory)/Final Boss/neonews/Dockerfile'
+        repository: $(repoName)
+        tags: |
+          $(tag)
+    - script: |
+        # Login to ECR
+        aws ecr get-login-password --region $(awsRegion) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com
+
+        # Tag and Push
+        docker tag $(repoName):$(tag) $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+        docker push $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)
+
+        echo "Pushed image to ECR: $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag)"
+      displayName: 'Push to ECR via AWS CLI'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)

@@ -78,7 +78,7 @@ stages:
         echo "The ID for aws-ecr is: $GROUP_ID"
         echo "Updating EC2_HOST in variable group aws-ecr..."
         az pipelines variable-group variable update \
-        --group-id $(GROUP_ID) \
+        --group-id $GROUP_ID \
         --org "https://dev.azure.com/bogdanbuciu/" \
         --project "Test-pipelines" \
         --name EC2_HOST \
