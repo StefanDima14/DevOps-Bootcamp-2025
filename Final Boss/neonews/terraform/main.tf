@@ -144,7 +144,7 @@ resource "aws_iam_role_policy_attachment" "cw_full" {
 
 resource "aws_iam_role_policy_attachment" "ssm_full" {
   role       = aws_iam_role.ec2_ecr_role.name
-  policy_arn = "arn:aws:iam::aws:policy/SSMFullAccess"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
 }
 
 # EC2 Instance Profile
