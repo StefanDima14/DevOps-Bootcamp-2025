@@ -137,6 +137,10 @@ Next step is pushing the image to the ECR. In the ECR the images are looking lik
 
 ![ECR](neonews/images/ecr.png)
 
+After pushing the image to the ECR the pipelie enters in the last deployment stage called "Deploy to EC2". In this stage, on the EC2 instance prerequisities are installed in order to made the deployment possible (Docker and AWS CLI are the main tools installed). Final step is the actual deployment which is in fact pulling the docker image from the ECR and starting the app container. After the container is up and running the application will be accessible through the internet by using the public IP address of the EC2 instance on 8080 port.
+
+![ECR](neonews/images/run_from_ec2.png)
+
 The application is using two S3 buckets, one to store the .tfstate files in order to have a backup of the infrastracture, and another one that stores the content fetch by the web application (news selected by the user). The DynamoDB is used for terraform state locks to prevent ovverides on the terraform states and also a table for the application that stores information about the news fetched based on the selected criteria (in the web interface the information is displayed based on this DynamoDB table). 
 
 #### S3 buckets
