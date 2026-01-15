@@ -24,9 +24,9 @@ Here is a breakdown of the project's file structure and the purpose of each dire
 This directory contains the docker-compose file that allows to test the application on the local machine before deploying on AWS Cloud. It is useful to use in order to identify issues and fix them before building the final image to deploy
 
 ### **`pipelines`**
-This directory contains the CI/CD pipelines definition for Azure DevOps in order to deploy the application on an EC2 instance in AWS
-**infra-deployment.yml**: The Pipeline that creates the infrastructure for the application. The infrastracture is created with Terraform and all the configuration can be found in **terraform/** directory.
-**code-build**: The pipeline that tests the code using tools for linting and unit tests, then builds the docker image, scans the image for vulnerabilities with Trivy and finaly deploys and runs the application on an EC2 instance.
+This directory contains the CI/CD pipelines definition for Azure DevOps in order to deploy the application on an EC2 instance in AWS.
+*   **infra-deployment.yml**: The Pipeline that creates the infrastructure for the application. The infrastracture is created with Terraform and all the configuration can be found in **terraform/** directory.
+*   **code-build**: The pipeline that tests the code using tools for linting and unit tests, then builds the docker image, scans the image for vulnerabilities with Trivy and finaly deploys and runs the application on an EC2 instance.
 
 ### **`src\`**
 This directory contains the core logic of the application
@@ -64,9 +64,7 @@ This file encapsulates all logic related to Amazon Web Services (AWS) interactio
     *   Manages connections to **Amazon S3** for archiving the full raw JSON content of the news fetches.
     *   Handles the creation and deletion of these cloud resources programmatically.
 
-### Architecture design
-
-# Neonews Infrastructure
+# Architecture design
 
 This Terraform configuration provisions the AWS infrastructure required for the Neonews application.
 
@@ -110,9 +108,9 @@ To automate the infrastructure provision and application build and deployment, t
 
 ![Infra](neonews/images/cicd-workflow.png)
 
-The deployment process is made in two steps. First run the infra-deployment.yml from **pipelines/** to create the all underlying infrastrcuture that creates an EC2 instance that has a public IP address. The second step is running the code-build.yml pipeline that is the actual building docker image of the application, test the code and push the image to a container registry (in this case was used the ECR solution from AWS)
+The deployment process consists of two steps. First, run the `infra-deployment.yml` pipeline from **pipelines/** to provision all underlying infrastructure, including an EC2 instance with a public IP address. The second step involves running the `code-build.yml` pipeline, which builds the application's Docker image, tests the code, and pushes the image to a container registry (in this case, AWS ECR).
 
-When the infra-deployment pipeline runs, after the terraform apply the pipeline stores the ec2_public_ip in a variable called EC2_HOST which will be saved in the same variable group (aws-ecr) to use it in the code-deployment.yml pipeline. 
+When the infra-deployment pipeline runs, after `terraform apply` completes, the pipeline stores the `ec2_public_ip` in a variable called `EC2_HOST`. This variable is saved in the `aws-ecr` variable group for use in the `code-deployment.yml` pipeline.
 
 #### Example output of the infrastructure pipeline
 ![Infra](neonews/images/infra-run-pipeline.png)
@@ -121,7 +119,7 @@ The code-build pipeline is triggered manually. At each run will test the code, b
 
 #### Code build deployment pipeline
 
-First of all the code is tested in a stage called "Run tests". Here the code is linted using flake8 tool and then tested with its own unit tests.
+First of all the code is tested in a stage called "Run tests". Here the code is test linted using flake8 tool and then tested with its own unit tests.
 
 ![Infra](neonews/images/code_lint.png)
 
@@ -129,7 +127,7 @@ If tests passed the pipelines jois the "Build Image" stage where the actual dock
 
 ![Infra](neonews/images/build_image.png)
 
-After the image build runs a vulnerability scan on the image to identify possible critical security issues. The scan is made using the trivy tool. In this case no vulnerabilities were found. If any vulnerability would be found would result in a pipeline failure.
+After the image build, a vulnerability scan runs on the image to identify possible critical security issues. The scan is performed using the Trivy tool. In this case, no vulnerabilities were found. If any vulnerabilities were detected, the pipeline would fail.
 
 ![Infra](neonews/images/vulnerability_scan.png)
 
@@ -141,7 +139,7 @@ After pushing the image to the ECR the pipelie enters in the last deployment sta
 
 ![ECR](neonews/images/run_from_ec2.png)
 
-The application is using two S3 buckets, one to store the .tfstate files in order to have a backup of the infrastracture, and another one that stores the content fetch by the web application (news selected by the user). The DynamoDB is used for terraform state locks to prevent ovverides on the terraform states and also a table for the application that stores information about the news fetched based on the selected criteria (in the web interface the information is displayed based on this DynamoDB table). 
+The application is using two S3 buckets, one to store the .tfstate files in order to have a backup of the infrastracture, and another one that stores the content fetch by the web application (news selected by the user). The DynamoDB is used for terraform state locks to prevent overrides on the terraform states and also a table for the application that stores information about the news fetched based on the selected criteria (in the web interface the information is displayed based on this DynamoDB table). 
 
 #### S3 buckets
 
