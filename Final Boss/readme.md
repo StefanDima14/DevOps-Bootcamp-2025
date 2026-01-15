@@ -119,9 +119,21 @@ When the infra-deployment pipeline runs, after the terraform apply the pipeline 
 
 The code-build pipeline is triggered manually. At each run will test the code, build the docker image, scan the image for vulnerabilities and deploy the image to ECR then pulled the image on EC2 and run the application. To connect remotely to the EC2 via SSH, the private key is stored as secure file in Library and Downloaded when needed in the pipeline. The image built is tagged with a tag starting from 1.0.x and each build will increment the value of the tag. 
 
+#### Code build deployment pipeline
 
+First of all the code is tested in a stage called "Run tests". Here the code is linted using flake8 tool and then tested with its own unit tests.
 
-In the ECR the images are looking like this: 
+![Infra](neonews/images/code_lint.png)
+
+If tests passed the pipelines jois the "Build Image" stage where the actual docker image is built using the Dockerfile.
+
+![Infra](neonews/images/build_image.png)
+
+After the image build runs a vulnerability scan on the image to identify possible critical security issues. The scan is made using the trivy tool. In this case no vulnerabilities were found. If any vulnerability would be found would result in a pipeline failure.
+
+![Infra](neonews/images/vulnerability_scan.png)
+
+Next step is pushing the image to the ECR. In the ECR the images are looking like this: 
 
 ![ECR](neonews/images/ecr.png)
 
