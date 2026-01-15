@@ -118,10 +118,6 @@ stages:
              sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
            fi
            aws --version'
-           wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/linux/amd64/latest/AmazonCloudWatchAgent.zip
-           unzip -q AmazonCloudWatchAgent.zip
-           sudo ./install.sh
-           sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c ssm:/alarm/AWS-CWAgentLinConfig -s
       displayName: 'Install Prerequisites on EC2'
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)

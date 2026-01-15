@@ -2,15 +2,12 @@ services:
   app: 
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: newonews/Dockerfile
     container_name: python-app
     ports:
       - "8080:5000"
-    environment:
-    - NEWSDATA_API_KEY=pub_1e47f19aa7e34cf69b7c9081919a62a3
-    - AWS_REGION=eu-west-1
-    - DYNAMODB_TABLE=neonews-
-    - S3_BUCKET_NAME=neonews-bucket-demo-123
+    env_file:
+      - ../src/.env
     restart: unless-stopped
     volumes:
       - ../src:/app
