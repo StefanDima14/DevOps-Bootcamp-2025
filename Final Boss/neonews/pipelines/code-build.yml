@@ -133,7 +133,7 @@ stages:
            docker pull $(AWS_ACCOUNT_ID).dkr.ecr.$(awsRegion).amazonaws.com/$(repoName):$(tag) &&
            docker stop python-app || true &&
            docker rm python-app || true &&
-           docker run -d -p 8080:5000 --name python-app \
+           docker run -d -p 8081:5000 --name python-app \
             --log-driver=awslogs \
             --log-opt awslogs-region=$(awsRegion) \
             --log-opt awslogs-group=/neonews/python-app \
