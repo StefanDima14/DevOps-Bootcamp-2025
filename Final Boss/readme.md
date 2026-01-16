@@ -152,3 +152,9 @@ The application is using two S3 buckets, one to store the .tfstate files in orde
 ![ECR](neonews/images/dynamodb_tables.png)
 
 ![ECR](neonews/images/dynamodb_neonews.png)
+
+
+
+# Extra
+
+Trivy found a vulnerability in the image build:  CVE-2026-0861 https://avd.aquasec.com/nvd/2026/cve-2026-0861/
