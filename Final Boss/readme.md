@@ -158,3 +158,7 @@ The application is using two S3 buckets, one to store the .tfstate files in orde
 # Extra
 
 Trivy found a vulnerability in the image build:  CVE-2026-0861 https://avd.aquasec.com/nvd/2026/cve-2026-0861/
+
+The issue was that the python:3.12-slim (used previosly to test the application) image is built on Debian, which uses a core system library called **glibc**. A critical vulnerability (CVE-2026-0861) was found in that library's memory management code, creating a risk of heap corruption. I fixed this by switching the base image to Alpine Linux. Unlike Debian, Alpine uses a completely different library called **musl** to handle its system functions. Because the vulnerable glibc code doesn't exist in an Alpine environment, the container is now naturally immune to the exploit.
+
+![ECR](neonews/images/trivy-vulnerabilities.png)
