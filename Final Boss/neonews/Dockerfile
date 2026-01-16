@@ -1,6 +1,6 @@
 #-------BUILD STAGE--------
 
-FROM python:3.12-slim AS base
+FROM python:3.15-rc-alpine AS base
 WORKDIR /app
 COPY src/ .
 
@@ -8,14 +8,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 #-------FINAL STAGE--------
 
-FROM python:3.12-slim AS release
+FROM python:3.15-rc-alpine AS release
 WORKDIR /app
 
 # Add these lines to patch the OS vulnerabilities
-RUN apt-get update && apt-get upgrade -y && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk update && apk upgrade && \
+    rm -rf /var/cache/apk/*
 
-COPY --from=base /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=base /usr/local/lib/python3.15/site-packages /usr/local/lib/python3.15/site-packages
 COPY --from=base /app /app
 
 EXPOSE 5000

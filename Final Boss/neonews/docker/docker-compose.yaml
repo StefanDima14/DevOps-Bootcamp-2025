@@ -2,8 +2,9 @@ services:
   app: 
     build:
       context: ..
-      dockerfile: newonews/Dockerfile
-    container_name: python-app
+      dockerfile: Dockerfile
+    image: neonews-webapp
+    container_name: neonews
     ports:
       - "8080:5000"
     env_file:
