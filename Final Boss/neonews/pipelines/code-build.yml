@@ -11,7 +11,7 @@ variables:
 - name: repoName
   value: 'neonews'
 
-parameters
+parameters:
 - name: monitoring
   displayName: "Enable monitoring"
   type: boolean
