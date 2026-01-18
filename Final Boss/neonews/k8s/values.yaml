@@ -1,0 +1,34 @@
+replicaCount: 2
+
+image:
+  repository: stefandima1407/neonews
+  pullPolicy: IfNotPresent
+  tag: "1.0.1"
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: LoadBalancer
+  port: 8081
+  targetPort: 5000
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 250m
+    memory: 128Mi
+
+secrets:
+  newsdataApiKey: "eHh4eHh4eHh4eA=="
+  awsRegion: "eHh4eHh4eHh4eA=="
+  s3BucketName: "eHh4eHh4eHh4eA=="
+  awsAccessKeyId: "eHh4eHh4eHh4eA=="
+  awsSecretAccessKey: "eHh4eHh4eHh4eA=="
+  dynamodbTable: "eHh4eHh4eHh4eA=="
+  awsAccountId: "eHh4eHh4eHh4eA=="
+
+app:
+  name: neonews

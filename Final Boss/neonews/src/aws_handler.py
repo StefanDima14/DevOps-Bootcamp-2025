@@ -94,6 +94,70 @@ class AWSClient:
         
         return True
 
+    def clear_resources(self):
+        """Master command to clear both DynamoDB and S3 resources without deleting them."""
+        rprint("[bold yellow]⚠ STARTING RESOURCE CLEARING ⚠[/bold yellow]")
+        self.clear_dynamodb_table()
+        self.clear_s3_bucket()
+
+    def clear_dynamodb_table(self):
+        """Deletes all items from the DynamoDB table without deleting the table."""
+        try:
+            table = self.dynamodb.Table(DYNAMODB_TABLE)
+            table.load()  # Check if table exists
+            rprint(f"⏳ Deleting all items from table '{DYNAMODB_TABLE}'...")
+            
+            with table.batch_writer() as batch:
+                scan = None
+                while True:
+                    if scan and 'LastEvaluatedKey' in scan:
+                        scan = table.scan(ExclusiveStartKey=scan['LastEvaluatedKey'])
+                    else:
+                        scan = table.scan()
+                    
+                    if 'Items' in scan and len(scan['Items']) > 0:
+                        for item in scan['Items']:
+                            batch.delete_item(Key={'id': item['id']})
+                        rprint(f"   - Deleted batch of {len(scan['Items'])} items")
+                    
+                    if 'LastEvaluatedKey' not in scan:
+                        break
+            
+            rprint(f"✅ Table '{DYNAMODB_TABLE}' is now empty.")
+            
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'ResourceNotFoundException':
+                rprint(f"✅ Table '{DYNAMODB_TABLE}' does not exist.")
+            else:
+                rprint(f"❌ Error clearing DynamoDB table: {e}")
+
+    def clear_s3_bucket(self):
+        """Empties the S3 bucket without deleting it."""
+        if not S3_BUCKET_NAME:
+            return
+
+        rprint(f"⏳ Emptying bucket '{S3_BUCKET_NAME}'...")
+        try:
+            # Check if bucket exists
+            self.s3.head_bucket(Bucket=S3_BUCKET_NAME)
+            
+            # Empty the bucket
+            while True:
+                response = self.s3.list_objects_v2(Bucket=S3_BUCKET_NAME)
+                if 'Contents' not in response:
+                    break
+
+                objects = [{'Key': obj['Key']} for obj in response['Contents']]
+                self.s3.delete_objects(Bucket=S3_BUCKET_NAME, Delete={'Objects': objects})
+                rprint(f"   - Deleted batch of {len(objects)} files")
+            rprint(f"✅ Bucket '{S3_BUCKET_NAME}' is now empty.")
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchBucket':
+                rprint(f"✅ Bucket '{S3_BUCKET_NAME}' does not exist.")
+            else:
+                rprint(f"❌ Error emptying S3 bucket: {e}")
+
     def wipe_resources(self):
         """Master command to destroy both DynamoDB and S3 resources."""
         rprint("[bold red]⚠ STARTING RESOURCE DESTRUCTION ⚠[/bold red]")

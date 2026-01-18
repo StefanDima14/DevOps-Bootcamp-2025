@@ -154,6 +154,13 @@ The application is using two S3 buckets, one to store the .tfstate files in orde
 ![ECR](neonews/images/dynamodb_neonews.png)
 
 
+# Helm Chart
+
+The app was also adapted to be installed using helm on the local machine. In order to run the application on the local machine it will be needed to have installed the Helm and minikube tools. 
+
+To install the helm chart use this command: **helm install neonews k8s/  --namespace neonews --create-namespace**. The command will create a namespace called **neonews** and all the resources of the application. 
+
+The application uses a service type of LoadBalancer, minikube offers a feature to test the LoadBalancer services running the command **minikube tunnel** in a separate terminal. Then the service will get assigned an external IP. To access the application, open your browser and access the http:<Your_EXTERNAL_IP>:8081
 
 # Extra
 

@@ -70,5 +70,17 @@ def index():
 
     return render_template('index.html')
 
+@app.route('/clear-s3', methods=['POST'])
+def clear_s3():
+    aws.clear_s3_bucket()
+    flash("S3 bucket has been cleared.", "success")
+    return redirect(url_for('index'))
+
+@app.route('/clear-dynamodb', methods=['POST'])
+def clear_dynamodb():
+    aws.clear_dynamodb_table()
+    flash("DynamoDB table has been cleared.", "success")
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
