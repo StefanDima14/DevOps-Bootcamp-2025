@@ -153,3 +153,108 @@ stages:
         EC2_HOST: $(EC2_HOST)
         S3_BUCKET_NAME: $(S3_BUCKET_NAME)
         DYNAMODB_TABLE: $(DYNAMODB_TABLE)`
+
+- stage: Monitoring
+  displayName: Setup Monitoring
+  dependsOn: Deploy
+  condition: succeeded()
+  jobs:
+  - job: SetupMonitoring
+    displayName: Setup CloudWatch Agent on EC2
+    steps:
+    - task: DownloadSecureFile@1
+      name: sshKey
+      displayName: 'Download SSH Key'
+      inputs:
+        secureFile: 'nodes-connect'
+    - script: |
+        cat $(sshKey.secureFilePath) | tr -d '\r' > fixed_key
+        echo "" >> fixed_key
+        chmod 400 fixed_key
+
+        ssh -o StrictHostKeyChecking=no -i fixed_key ubuntu@$(EC2_HOST) 'bash -s' << 'ENDSSH'
+          set -e
+          
+          # Install CloudWatch Agent
+          wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O amazon-cloudwatch-agent.deb
+          sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+          rm -f amazon-cloudwatch-agent.deb
+          
+          # Configure Prometheus for CloudWatch
+          sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc/
+          sudo tee /opt/aws/amazon-cloudwatch-agent/etc/prometheus.yaml > /dev/null <<EOF
+          global:
+            scrape_interval: 1m
+            scrape_timeout: 10s
+          scrape_configs:
+            - job_name: 'cadvisor'
+              static_configs:
+                - targets: ['localhost:8080']
+          EOF
+
+          # Configure CloudWatch Agent
+          sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json > /dev/null <<EOF
+          {
+            "logs": {
+              "metrics_collected": {
+                "prometheus": {
+                  "log_group_name": "/aws/containerinsights/cadvisor/prometheus",
+                  "prometheus_config_path": "/opt/aws/amazon-cloudwatch-agent/etc/prometheus.yaml",
+                  "emf_processor": {
+                    "metric_declaration": [
+                      {
+                        "source_labels": ["job"],
+                        "label_matcher": "^cadvisor$",
+                        "dimensions": [["name"]],
+                        "metric_selectors": [
+                          "^container_cpu_usage_seconds_total$",
+                          "^container_memory_usage_bytes$",
+                          "^container_network_.*_bytes_total$",
+                          "^container_fs_.*_bytes_total$"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+          EOF
+
+          # Start CloudWatch Agent
+          sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+            -a fetch-config -m ec2 \
+            -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json \
+            -s
+          
+          echo "CloudWatch Agent configured and started."
+
+          # Setup cAdvisor
+          echo "Setting up cAdvisor..."
+          sudo docker stop cadvisor || true
+          sudo docker rm cadvisor || true
+          
+          # Using a stable version of cAdvisor
+          VERSION=v0.47.2
+          sudo docker run \
+            --volume=/:/rootfs:ro \
+            --volume=/var/run:/var/run:ro \
+            --volume=/sys:/sys:ro \
+            --volume=/var/lib/docker/:/var/lib/docker:ro \
+            --volume=/dev/disk/:/dev/disk:ro \
+            --publish=8080:8080 \
+            --detach=true \
+            --name=cadvisor \
+            --privileged \
+            --device=/dev/kmsg \
+            gcr.io/cadvisor/cadvisor:\$VERSION
+        ENDSSH
+      displayName: 'Install and Configure CloudWatch Agent and cAdvisor on EC2'
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        AWS_ACCOUNT_ID: $(AWS_ACCOUNT_ID)
+        EC2_HOST: $(EC2_HOST)
+        NEWSDATA_API_KEY: $(NEWSDATA_API_KEY)
+        S3_BUCKET_NAME: $(S3_BUCKET_NAME)
+        DYNAMODB_TABLE: $(DYNAMODB_TABLE)
