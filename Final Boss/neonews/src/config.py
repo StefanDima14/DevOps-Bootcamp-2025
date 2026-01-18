@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 # Load .env file
 load_dotenv()
 
+# Sanitize AWS credentials to remove accidental newlines (common with base64 encoding)
+for key in ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]:
+    if os.getenv(key):
+        os.environ[key] = os.getenv(key).strip()
+
 NEWSDATA_API_KEY = os.getenv("NEWSDATA_API_KEY")
 AWS_REGION = os.getenv("AWS_REGION")
 DYNAMODB_TABLE = os.getenv("DYNAMODB_TABLE")

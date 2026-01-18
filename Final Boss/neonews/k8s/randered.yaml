@@ -1,0 +1,84 @@
+---
+# Source: neonews-app/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: release-name-neonews-app-secret
+  labels:
+    helm.sh/chart: neonews-app-0.1.0
+    app.kubernetes.io/name: neonews-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  NEWSDATA_API_KEY: "eHh4eHh4eHh4eA=="
+  AWS_REGION: "eHh4eHh4eHh4eA=="
+  S3_BUCKET_NAME: "eHh4eHh4eHh4eA=="
+  AWS_ACCESS_KEY_ID: "eHh4eHh4eHh4eA=="
+  AWS_SECRET_ACCESS_KEY: "eHh4eHh4eHh4eA=="
+  DYNAMODB_TABLE: "eHh4eHh4eHh4eA=="
+  AWS_ACCOUNT_ID: "eHh4eHh4eHh4eA=="
+---
+# Source: neonews-app/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: release-name-neonews-app
+  labels:
+    helm.sh/chart: neonews-app-0.1.0
+    app.kubernetes.io/name: neonews-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8081
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: neonews-app
+    app.kubernetes.io/instance: release-name
+---
+# Source: neonews-app/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-name-neonews-app
+  labels:
+    helm.sh/chart: neonews-app-0.1.0
+    app.kubernetes.io/name: neonews-app
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: neonews-app
+      app.kubernetes.io/instance: release-name
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: neonews-app
+        app.kubernetes.io/instance: release-name
+    spec:
+      containers:
+        - name: neonews-app
+          image: "stefandima1407/neonews:1.0.1"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 250m
+              memory: 128Mi
+          envFrom:
+            - secretRef:
+                name: release-name-neonews-app-secret
