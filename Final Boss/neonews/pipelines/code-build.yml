@@ -23,6 +23,7 @@ resources:
 stages:
 - stage: Test
   displayName: Run Tests
+  condition: eq('${{ parameters.monitoring }}', false)
   jobs:
   - job: UnitTests
     displayName: Run Unit Tests
@@ -51,9 +52,10 @@ stages:
         DYNAMODB_TABLE: 'neonews-demo'
         S3_BUCKET_NAME: 'neonews-bucket-demo-123'
         AWS_REGION: 'eu-west-1'
+
 - stage: Build
   dependsOn: Test
-  condition: succeeded()
+  condition: and(succeeded(), eq('${{ parameters.monitoring }}', false))
   displayName: Build image
   jobs:
   - job: BuildAndPush
@@ -96,7 +98,7 @@ stages:
 - stage: Deploy
   displayName: Deploy to EC2
   dependsOn: Build
-  condition: succeeded()
+  condition: and(succeeded(), eq('${{ parameters.monitoring }}', false))
   jobs:
   - job: Deploy
     displayName: Deploy to EC2
@@ -162,8 +164,7 @@ stages:
 
 - stage: Monitoring
   displayName: Setup Monitoring
-  dependsOn: Deploy
-  condition: succeeded()
+  condition: eq('${{ parameters.monitoring }}', true)
   jobs:
   - job: SetupMonitoring
     displayName: Setup CloudWatch Agent on EC2
@@ -263,4 +264,3 @@ stages:
         NEWSDATA_API_KEY: $(NEWSDATA_API_KEY)
         S3_BUCKET_NAME: $(S3_BUCKET_NAME)
         DYNAMODB_TABLE: $(DYNAMODB_TABLE)
-      condition: eq(variables['monitoring'], 'true')
