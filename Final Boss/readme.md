@@ -154,6 +154,22 @@ The application is using two S3 buckets, one to store the .tfstate files in orde
 ![ECR](neonews/images/dynamodb_neonews.png)
 
 
+# Monitoring
+
+Monitoring was enabled using **cAdvisor** and the **Amazon CloudWatch Agent**.
+
+**cAdvisor** (Container Advisor) is an open-source tool that analyzes resource usage and performance characteristics of running containers. It collects, aggregates, processes, and exports information such as CPU, memory, and network usage for each container.
+
+The following metrics are extracted to be used in the CloudWatch dashboard:
+- `container_cpu_usage_seconds_total`: Total CPU usage.
+- `container_memory_usage_bytes`: Memory usage in bytes.
+- `container_network_.*_bytes_total`: Network I/O bytes.
+- `container_fs_.*_bytes_total`: Filesystem usage bytes.
+
+The configuration for the CloudWatch Agent can be found in the `code-build` pipeline.
+
+![monitoring](neonews/images/monitoring.png)
+
 # Helm Chart
 
 The app was also adapted to be installed using helm on the local machine. In order to run the application on the local machine it will be needed to have installed the Helm and minikube tools. 
