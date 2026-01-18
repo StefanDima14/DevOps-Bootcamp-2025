@@ -253,7 +253,7 @@ stages:
           --name=cadvisor \
           --privileged \
           --device=/dev/kmsg \
-          gcr.io/cadvisor/cadvisor:\$VERSION
+          gcr.io/cadvisor/cadvisor:$VERSION
         ENDSSH
       displayName: 'Install and Configure CloudWatch Agent and cAdvisor on EC2'
       env:
