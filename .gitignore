@@ -11,3 +11,4 @@ venv/
 nodes-connect
 nodes-connect.pub
 redis-data/
+values-dev.yaml

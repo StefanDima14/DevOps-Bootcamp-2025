@@ -13,7 +13,7 @@ variables:
 
 parameters:
 - name: monitoring
-  displayName: "Enable monitoring"
+  displayName: "Run monitoring only"
   type: boolean
   default: false
 
@@ -164,7 +164,6 @@ stages:
 
 - stage: Monitoring
   displayName: Setup Monitoring
-  condition: eq('${{ parameters.monitoring }}', true)
   jobs:
   - job: SetupMonitoring
     displayName: Setup CloudWatch Agent on EC2
